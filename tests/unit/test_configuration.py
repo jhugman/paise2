@@ -41,7 +41,7 @@ class TestConfiguration(unittest.TestCase):
 
         config_data = {
             "plugin1": {"key1": "value1"},
-            "plugin2": {"nested": {"key2": "value2"}}
+            "plugin2": {"nested": {"key2": "value2"}},
         }
         config = MockConfiguration(config_data)
 
@@ -61,15 +61,8 @@ class TestFileConfigurationProvider(unittest.TestCase):
         self.temp_dir = tempfile.mkdtemp()
         self.config_file = Path(self.temp_dir) / "test_config.yaml"
         self.config_data = {
-            "plugin1": {
-                "setting1": "value1",
-                "setting2": ["item1", "item2"]
-            },
-            "plugin2": {
-                "nested": {
-                    "key": "value"
-                }
-            }
+            "plugin1": {"setting1": "value1", "setting2": ["item1", "item2"]},
+            "plugin2": {"nested": {"key": "value"}},
         }
 
         # Write test configuration file
@@ -171,14 +164,7 @@ class TestConfigurationMerging(unittest.TestCase):
         manager = ConfigurationManager()
         merged = manager.merge_plugin_configurations([config1, config2])
 
-        expected = {
-            "plugin1": {
-                "nested": {
-                    "key1": "value1",
-                    "key2": "value2"
-                }
-            }
-        }
+        expected = {"plugin1": {"nested": {"key1": "value1", "key2": "value2"}}}
         assert merged == expected
 
     def test_user_config_overrides_plugin_config(self):
@@ -228,6 +214,7 @@ class TestConfigurationManager(unittest.TestCase):
 
         # Clean up temp directory
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_paise_config_dir_environment_variable(self):

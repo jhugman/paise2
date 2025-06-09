@@ -52,7 +52,7 @@ class MockContentExtractor:
         """Returns preferred MIME types."""
         return ["text/test", "application/test"]
 
-    async    def extract(
+    async def extract(
         self,
         host: ContentExtractorHost,
         content: bytes | str,

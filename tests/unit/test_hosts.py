@@ -84,9 +84,7 @@ class TestStateManager:
 
         result = state_manager.get_versioned_state(3)
 
-        mock_storage.get_versioned_state.assert_called_once_with(
-            plugin_module_name, 3
-        )
+        mock_storage.get_versioned_state.assert_called_once_with(plugin_module_name, 3)
         assert result == [("key1", "value1", 1), ("key2", "value2", 2)]
 
     def test_state_get_all_keys_with_value(self):
@@ -133,7 +131,7 @@ class TestBaseHost:
             logger=mock_logger,
             configuration=mock_configuration,
             state_storage=mock_state_storage,
-            plugin_module_name=plugin_module_name
+            plugin_module_name=plugin_module_name,
         )
 
         assert host.logger is mock_logger
@@ -151,7 +149,7 @@ class TestBaseHost:
             logger=mock_logger,
             configuration=mock_configuration,
             state_storage=mock_state_storage,
-            plugin_module_name=plugin_module_name
+            plugin_module_name=plugin_module_name,
         )
 
         assert isinstance(host.state, StateManager)
@@ -167,7 +165,7 @@ class TestBaseHost:
             logger=mock_logger,
             configuration=mock_configuration,
             state_storage=mock_state_storage,
-            plugin_module_name=plugin_module_name
+            plugin_module_name=plugin_module_name,
         )
 
         # Test that state operations use the correct partition
@@ -188,7 +186,7 @@ class TestBaseHost:
             logger=mock_logger,
             configuration=mock_configuration,
             state_storage=mock_state_storage,
-            plugin_module_name=plugin_module_name
+            plugin_module_name=plugin_module_name,
         )
 
         # Should have the method but it's a placeholder for now
@@ -214,7 +212,7 @@ class TestHostFactories:
             logger=mock_logger,
             configuration=mock_configuration,
             state_storage=mock_state_storage,
-            plugin_module_name=plugin_module_name
+            plugin_module_name=plugin_module_name,
         )
 
         assert isinstance(host, BaseHost)
@@ -242,6 +240,7 @@ class TestStateManagerImplementation:
     def test_state_manager_implements_protocol(self):
         """Test that our StateManager implementation matches the protocol."""
         from paise2.plugins.core.hosts import ConcreteStateManager
+
         mock_storage = Mock(spec=StateStorage)
 
         state_manager = ConcreteStateManager(mock_storage, "test.module")
@@ -256,6 +255,7 @@ class TestStateManagerImplementation:
     def test_concrete_state_manager_store_operation(self):
         """Test ConcreteStateManager store operation."""
         from paise2.plugins.core.hosts import ConcreteStateManager
+
         mock_storage = Mock(spec=StateStorage)
 
         state_manager = ConcreteStateManager(mock_storage, "test.module")
@@ -266,6 +266,7 @@ class TestStateManagerImplementation:
     def test_concrete_state_manager_get_operation(self):
         """Test ConcreteStateManager get operation."""
         from paise2.plugins.core.hosts import ConcreteStateManager
+
         mock_storage = Mock(spec=StateStorage)
         mock_storage.get.return_value = "retrieved"
 

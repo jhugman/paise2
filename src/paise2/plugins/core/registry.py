@@ -195,14 +195,11 @@ class PluginManager:
                         for decorator in node.decorator_list:
                             # Check for @hookimpl decorator
                             if (
-                                (
-                                    isinstance(decorator, ast.Name)
-                                    and decorator.id == "hookimpl"
-                                )
-                                or (
-                                    isinstance(decorator, ast.Attribute)
-                                    and decorator.attr == "hookimpl"
-                                )
+                                isinstance(decorator, ast.Name)
+                                and decorator.id == "hookimpl"
+                            ) or (
+                                isinstance(decorator, ast.Attribute)
+                                and decorator.attr == "hookimpl"
                             ):
                                 return True
             except SyntaxError:
@@ -227,14 +224,24 @@ class PluginManager:
     def load_plugins(self) -> None:
         """Load all discovered plugins and call their registration hooks."""
         # Call registration hooks with callback functions
-        self.pm.hook.register_configuration_provider(register=self._register_configuration_provider)
-        self.pm.hook.register_content_extractor(register=self._register_content_extractor)
+        self.pm.hook.register_configuration_provider(
+            register=self._register_configuration_provider
+        )
+        self.pm.hook.register_content_extractor(
+            register=self._register_content_extractor
+        )
         self.pm.hook.register_content_source(register=self._register_content_source)
         self.pm.hook.register_content_fetcher(register=self._register_content_fetcher)
         self.pm.hook.register_lifecycle_action(register=self._register_lifecycle_action)
-        self.pm.hook.register_data_storage_provider(register=self._register_data_storage_provider)
-        self.pm.hook.register_job_queue_provider(register=self._register_job_queue_provider)
-        self.pm.hook.register_state_storage_provider(register=self._register_state_storage_provider)
+        self.pm.hook.register_data_storage_provider(
+            register=self._register_data_storage_provider
+        )
+        self.pm.hook.register_job_queue_provider(
+            register=self._register_job_queue_provider
+        )
+        self.pm.hook.register_state_storage_provider(
+            register=self._register_state_storage_provider
+        )
         self.pm.hook.register_cache_provider(register=self._register_cache_provider)
 
     # Registration callback functions
@@ -384,6 +391,20 @@ class PluginManager:
         """Get all registered cache providers."""
         return self._cache_providers.copy()
 
+    def validate_configuration_provider(self, provider: ConfigurationProvider) -> None:
+        """
+        Validate that a configuration provider implements the required protocol.
+
+        Args:
+            provider: Configuration provider to validate
+
+        Raises:
+            AttributeError: If provider doesn't implement required methods
+        """
+        if not self.validate_plugin(provider, ConfigurationProvider):
+            msg = f"Invalid configuration provider: {provider}"
+            raise AttributeError(msg)
+
     def validate_plugin(self, plugin: Any, protocol_class: type) -> bool:
         """Validate that a plugin implements the required protocol."""
         # Check for None plugin first
@@ -494,11 +515,14 @@ class PluginManager:
         try:
             # Get methods from annotations (for Protocol classes)
             if hasattr(protocol_class, "__annotations__"):
-                methods.update({
-                    name: annotation
-                    for name, annotation in protocol_class.__annotations__.items()
-                    if callable(annotation) or self._is_callable_annotation(annotation)
-                })
+                methods.update(
+                    {
+                        name: annotation
+                        for name, annotation in protocol_class.__annotations__.items()
+                        if callable(annotation)
+                        or self._is_callable_annotation(annotation)
+                    }
+                )
 
             # Also check for methods defined directly
             for attr_name in dir(protocol_class):

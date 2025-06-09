@@ -89,6 +89,11 @@ sequenceDiagram
 **Rationale**: Allows plugins to provide sensible defaults while enabling user customization
 **Implementation**: Plugin-to-plugin merging (last wins), user overrides all, list concatenation
 
+### 8. Configuration Integration Strategy
+**Decision**: Integrate configuration system with plugin registration using factory pattern
+**Rationale**: Enables plugins to provide default configurations merged with user overrides in application-wide singleton
+**Implementation**: ConfigurationFactory creates configuration from plugins + user config, validate_configuration_provider ensures protocol compliance
+
 ## Component Relationships
 
 ### Core Components
@@ -203,6 +208,15 @@ graph LR
 3. **Load user configuration** files
 4. **User settings override** plugin defaults completely
 5. **Provide merged configuration** to all plugins via host
+
+### Configuration Integration Path
+1. **Plugin provides ConfigurationProvider** via @hookimpl decorated function
+2. **PluginManager validates provider** using validate_configuration_provider method
+3. **ConfigurationFactory collects providers** during singleton creation phase
+4. **Plugin defaults merged** using ConfigurationManager.merge_with_user_overrides
+5. **User configuration overrides** plugin defaults completely
+6. **Application configuration created** as singleton accessible by all plugins via host
+7. **Plugins access configuration** through host.configuration property
 
 ## Error Handling Patterns
 

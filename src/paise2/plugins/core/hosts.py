@@ -51,7 +51,7 @@ class BaseHost:
         logger: Any,
         configuration: Configuration,
         state_storage: StateStorage,
-        plugin_module_name: str
+        plugin_module_name: str,
     ):
         self._logger = logger
         self._configuration = configuration
@@ -124,7 +124,7 @@ def create_base_host(
     logger: Any,
     configuration: Configuration,
     state_storage: StateStorage,
-    plugin_module_name: str
+    plugin_module_name: str,
 ) -> BaseHost:
     """Create a BaseHost instance."""
     return BaseHost(logger, configuration, state_storage, plugin_module_name)

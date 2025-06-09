@@ -129,6 +129,23 @@ class ConfigurationManager:
         result = self._deep_copy_dict(plugin_config)
         return self._merge_dicts(result, user_config)
 
+    def merge_with_user_overrides(
+        self, plugin_config: ConfigurationDict, user_config: ConfigurationDict
+    ) -> ConfigurationDict:
+        """
+        Merge plugin configuration with user overrides.
+
+        This is an alias for merge_configurations for backward compatibility.
+
+        Args:
+            plugin_config: Plugin default configuration
+            user_config: User override configuration
+
+        Returns:
+            Merged configuration with user overrides taking precedence
+        """
+        return self.merge_configurations(plugin_config, user_config)
+
     def get_config_dir(self) -> str:
         """
         Get the configuration directory from PAISE_CONFIG_DIR environment variable.
