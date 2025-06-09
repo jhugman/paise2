@@ -338,15 +338,14 @@ Requirements:
 1. Update the plugin registration system to handle ConfigurationProvider plugins
 2. Create configuration singleton creation logic in the startup sequence
 3. Integrate configuration access into BaseHost
-4. Add configuration reloading capability with diff detection
-5. Create test configuration providers for testing
-6. Update host interfaces to provide configuration access
-7. Add comprehensive integration tests:
+4. Create test configuration providers for testing
+5. Update host interfaces to provide configuration access
+6. Add comprehensive integration tests:
    - Configuration loading during startup
    - Plugin access to merged configuration
    - Configuration reloading behavior
    - Multiple configuration providers working together
-8. Add proper error handling for configuration failures during startup
+7. Add proper error handling for configuration failures during startup
 
 Focus on:
 - Seamless integration with plugin system
@@ -360,7 +359,6 @@ Focus on:
 - [x] Update plugin registration to handle ConfigurationProvider
 - [x] Create configuration singleton creation in startup sequence
 - [x] Integrate configuration access into BaseHost class
-- [x] Add configuration reloading with diff detection
 - [x] Create test configuration providers for comprehensive testing
 - [x] Update all host interfaces to provide configuration access
 - [x] Add integration tests for configuration loading during startup
@@ -398,8 +396,9 @@ Requirements:
 6. Add configuration documentation generation
 7. Create helper utilities for common configuration patterns
 8. Refactor any duplicate code in configuration handling
-9. Add configuration change notifications if needed
-10. Comprehensive testing of edge cases and error conditions
+9. Implement configuration reloading with diff detection and persistence
+10. Add configuration change notifications to plugins via Configuration protocol
+11. Comprehensive testing of edge cases and error conditions
 
 Focus on:
 - Improved developer experience
@@ -418,7 +417,10 @@ Focus on:
 - [ ] Add configuration documentation generation capabilities
 - [ ] Create helper utilities for common configuration access patterns
 - [ ] Refactor duplicate code in configuration handling
-- [ ] Add configuration change notification system if needed
+- [ ] Implement configuration reloading with diff detection and state persistence
+- [ ] Add configuration change notifications accessible via Configuration protocol
+- [ ] Save merged configuration state for comparison during reloads
+- [ ] Calculate and expose configuration diffs to plugins when config changes
 - [ ] Test edge cases and error conditions comprehensively
 - [ ] PROMPT 7 COMPLETE
 

@@ -492,8 +492,8 @@ Configuration uses a merged approach where all plugins can access the entire con
 - User configuration stored in directory defined by $PAISE_CONFIG_DIR (by default ~/.config/paise).
 - Uses YAML format for all configuration files
 - Provides access via `host.configuration` property
-- Supports dynamic reloading
-- Supports diffing between reloads: tree-based additions and removals, including lists
+- Supports dynamic reloading with diff detection and state persistence
+- Exposes configuration changes to plugins via Configuration protocol
 
 ### Configuration Merging Rules
 
@@ -509,6 +509,89 @@ Configuration uses a merged approach where all plugins can access the entire con
 max_size = host.configuration.get("plugin_name.max_file_size", default=1024)
 global_setting = host.configuration.get("global.log_level", default="INFO")
 ```
+
+### Configuration Reloading and Diffing
+
+The configuration system supports dynamic reloading with diff detection to notify plugins about configuration changes.
+
+#### Configuration State Persistence
+
+When the configuration system initializes, it saves the merged configuration state for comparison during future reloads:
+
+1. **Merged state storage**: The final merged configuration (plugin defaults + user overrides) is persisted
+2. **State comparison**: During reload operations, the new merged configuration is compared against the previous state
+3. **Diff calculation**: The system calculates tree-based differences including additions, removals, and modifications
+
+#### Configuration Diff Detection
+
+The system provides detailed diff information accessible via the Configuration protocol:
+
+```python
+# Configuration diff structure
+@dataclass(frozen=True)
+class ConfigurationDiff:
+    added: dict[str, Any]      # New configuration keys/sections
+    removed: dict[str, Any]    # Removed configuration keys/sections
+    modified: dict[str, Any]   # Changed configuration values
+    unchanged: dict[str, Any]  # Configuration that remained the same
+
+# Access diffs via Configuration protocol
+class Configuration(Protocol):
+    def get(self, key: str, default: Any) -> Any | None:
+        ...
+
+    def addition(self, key: str, default: T | None = None) -> T | None:
+        """Get the additions at the key path, or the default if none exist at that path"""
+        ...
+
+    def removal(self, key: str, default: T | None = None) -> T | None:
+        """Get the removals at the key path, or the default if none exist at that path"""
+        ...
+
+    def has_changed(self, key: str) -> bool:
+        """Check if a specific configuration key changed in the last reload."""
+        ...
+
+    @property
+    def last_diff(self): ConfigurationDiff | None
+```
+
+#### Configuration Change Notifications
+
+Plugins can be notified of configuration changes through the Configuration protocol:
+
+1. **Diff availability**: After a reload, `get_last_diff()` returns the differences between old and new configuration
+2. **Key-specific checks**: Use `has_changed("plugin.setting")` to check if specific settings changed
+3. **Comprehensive change detection**: Diffs include nested dictionary changes, list modifications, and scalar value updates
+
+#### Configuration Reload Workflow
+
+1. **Trigger reload**: Configuration reload can be triggered by file system changes or explicit API calls
+2. **Collect current state**: Gather plugin default configurations and current user overrides
+3. **Merge new configuration**: Apply the same merging rules to create new merged configuration
+4. **Calculate diff**: Compare new merged state against previously saved state
+5. **Update state**: Replace the current configuration state with the new merged configuration
+6. **Expose diffs**: Make diff information available to plugins via the Configuration protocol
+
+#### Usage Examples
+
+```python
+# Check for configuration changes in a plugin
+def on_configuration_reload(self, host):
+    config = host.configuration
+    diff = config.get_last_diff()
+
+    if diff and config.has_changed("my_plugin.api_key"):
+        # Reinitialize API client with new key
+        self.api_client = APIClient(config.get("my_plugin.api_key"))
+
+    if diff and diff.added:
+        # Handle new configuration sections
+        for key, value in diff.added.items():
+            self.handle_new_config(key, value)
+```
+
+This configuration diffing system enables plugins to react efficiently to configuration changes without needing to reload or reinitialize unnecessarily.
 
 ## Cache Management
 
