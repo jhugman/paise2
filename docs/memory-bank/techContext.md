@@ -10,7 +10,7 @@
 ## Technology Stack
 
 ### Core Dependencies
-- **Python 3.8+**: Minimum version for typing.Protocol support
+- **Python 3.13+**: Minimum version for typing.Protocol support
 - **uv**: Package manager for dependency management
 - **pluggy**: Plugin system infrastructure and hook management
 - **asyncio**: Asynchronous programming support for job processing
@@ -34,8 +34,7 @@
 ### Code Quality Tools
 - **mypy**: Static type checking (when added)
 - **pytest**: Testing framework (when added)
-- **black**: Code formatting (when added)
-- **ruff**: Linting (when added)
+- **ruff**: Linting and formatting (when added)
 
 ### Development Setup
 ```bash
