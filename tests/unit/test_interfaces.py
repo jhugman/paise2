@@ -208,9 +208,7 @@ class TestPhase2Protocols:
         """Test that CacheManager protocol is properly defined."""
 
         class TestCacheManager:
-            async def save(
-                self, partition_key: str, content: bytes | str
-            ) -> CacheId:
+            async def save(self, partition_key: str, content: bytes | str) -> CacheId:
                 return "test-cache-id"
 
             async def get(
@@ -384,9 +382,7 @@ class TestHostInterfaces:
                 return []
 
         class TestCacheManager:
-            async def save(
-                self, partition_key: str, content: bytes | str
-            ) -> CacheId:
+            async def save(self, partition_key: str, content: bytes | str) -> CacheId:
                 return "test-cache-id"
 
             async def get(
@@ -446,9 +442,7 @@ class TestHostInterfaces:
             def cache(self) -> CacheManager:
                 return TestCacheManager()
 
-            def extract_file(
-                self, content: bytes | str, metadata: Metadata
-            ) -> None:
+            def extract_file(self, content: bytes | str, metadata: Metadata) -> None:
                 pass
 
         host = TestContentExtractorHost()
@@ -461,9 +455,7 @@ class TestHostInterfaces:
         """Test that ContentSourceHost protocol is properly defined."""
 
         class TestCacheManager:
-            async def save(
-                self, partition_key: str, content: bytes | str
-            ) -> CacheId:
+            async def save(self, partition_key: str, content: bytes | str) -> CacheId:
                 return "test-cache-id"
 
             async def get(
@@ -531,9 +523,7 @@ class TestHostInterfaces:
         """Test that ContentFetcherHost protocol is properly defined."""
 
         class TestCacheManager:
-            async def save(
-                self, partition_key: str, content: bytes | str
-            ) -> CacheId:
+            async def save(self, partition_key: str, content: bytes | str) -> CacheId:
                 return "test-cache-id"
 
             async def get(
@@ -589,9 +579,7 @@ class TestHostInterfaces:
             def cache(self) -> CacheManager:
                 return TestCacheManager()
 
-            def extract_file(
-                self, content: bytes | str, metadata: Metadata
-            ) -> None:
+            def extract_file(self, content: bytes | str, metadata: Metadata) -> None:
                 pass
 
         host = TestContentFetcherHost()
@@ -732,9 +720,7 @@ class TestProtocolInheritance:
                 return []
 
         class TestCacheManager:
-            async def save(
-                self, partition_key: str, content: bytes | str
-            ) -> CacheId:
+            async def save(self, partition_key: str, content: bytes | str) -> CacheId:
                 return "test-cache-id"
 
             async def get(
@@ -779,9 +765,7 @@ class TestProtocolInheritance:
             def cache(self) -> CacheManager:
                 return TestCacheManager()
 
-            def extract_file(
-                self, content: bytes | str, metadata: Metadata
-            ) -> None:
+            def extract_file(self, content: bytes | str, metadata: Metadata) -> None:
                 pass
 
             def schedule_next_run(self, time_interval: timedelta) -> None:

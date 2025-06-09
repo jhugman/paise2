@@ -52,6 +52,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
     "ARG002",  # Unused method arguments in test mock classes
+    "PLR2004", # Magic value used in comparison (acceptable in tests)
     "C901",    # Complex functions in comprehensive test cases
 ]
 

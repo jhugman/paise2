@@ -77,11 +77,6 @@ paise2/
 │   │   │   ├── jobs.py             # Job queue providers
 │   │   │   ├── state.py            # State storage providers
 │   │   │   └── cache.py            # Cache providers
-│   │   └── test_plugins/           # Test plugin simulacra
-│   │       ├── extractors.py       # Test content extractors
-│   │       ├── sources.py          # Test content sources
-│   │       ├── fetchers.py         # Test content fetchers
-│   │       └── infrastructure.py   # Test infrastructure providers
 │   ├── config/                     # Configuration management
 │   │   ├── manager.py              # Configuration merging and loading
 │   │   └── models.py               # Configuration data models
@@ -103,11 +98,15 @@ paise2/
 ### Module Organization
 - **plugins/core**: Core plugin system infrastructure (interfaces, registration, management)
 - **plugins/providers**: Default implementations of infrastructure providers
-- **plugins/test_plugins**: Test plugins for development and testing
+- **plugins/core**: Core plugin system implementation (interfaces, registry)
 - **config**: Configuration loading and merging system
 - **storage**: Data storage abstractions and models
 - **state**: Plugin state management system
 - **utils**: Common utilities and helper functions
+
+### Test Structure
+- **tests/fixtures**: Mock plugins and test data for development and testing
+- **tests/unit**: Unit tests for all components
 
 ## Technical Constraints
 

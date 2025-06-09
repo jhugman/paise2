@@ -15,6 +15,41 @@ if TYPE_CHECKING:
 ConfigurationDict = dict[str, Any]
 
 
+@runtime_checkable
+class Configuration(Protocol):
+    """
+    Protocol for configuration access interface.
+
+    Provides a structured way to access configuration values with
+    support for typed lookups and default values.
+    """
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """
+        Get a configuration value by key.
+
+        Args:
+            key: Configuration key (can be dotted path like 'plugin.setting')
+            default: Default value if key not found
+
+        Returns:
+            Configuration value or default
+        """
+        ...
+
+    def get_section(self, section: str) -> ConfigurationDict:
+        """
+        Get an entire configuration section.
+
+        Args:
+            section: Section name
+
+        Returns:
+            Dictionary containing all values in the section
+        """
+        ...
+
+
 # =============================================================================
 # Phase 2: Singleton-Contributing Extension Points
 # =============================================================================
@@ -60,7 +95,7 @@ class DataStorageProvider(Protocol):
     to store indexed content and metadata.
     """
 
-    def create_data_storage(self, configuration: ConfigurationDict) -> DataStorage:
+    def create_data_storage(self, configuration: Configuration) -> DataStorage:
         """
         Create a data storage instance using the provided configuration.
 
@@ -224,7 +259,7 @@ class JobQueueProvider(Protocol):
     asynchronous work processing.
     """
 
-    def create_job_queue(self, configuration: ConfigurationDict) -> JobQueue:
+    def create_job_queue(self, configuration: Configuration) -> JobQueue:
         """
         Create a job queue instance using the provided configuration.
 
@@ -316,7 +351,7 @@ class StateStorageProvider(Protocol):
     for persisting plugin state between system runs.
     """
 
-    def create_state_storage(self, configuration: ConfigurationDict) -> StateStorage:
+    def create_state_storage(self, configuration: Configuration) -> StateStorage:
         """
         Create a state storage instance using the provided configuration.
 
@@ -462,7 +497,7 @@ class CacheProvider(Protocol):
     for storing temporary data and fetched content.
     """
 
-    def create_cache(self, configuration: ConfigurationDict) -> CacheManager:
+    def create_cache(self, configuration: Configuration) -> CacheManager:
         """
         Create a cache manager instance using the provided configuration.
 
@@ -720,12 +755,12 @@ class BaseHost(Protocol):
         ...
 
     @property
-    def configuration(self) -> ConfigurationDict:
+    def configuration(self) -> Configuration:
         """
         Merged system configuration.
 
         Returns:
-            Configuration dictionary
+            Configuration instance
         """
         ...
 
@@ -856,7 +891,6 @@ class DataStorageHost(BaseHost, Protocol):
 
     Provides data storage implementations with basic host functionality.
     """
-
 
 
 @runtime_checkable

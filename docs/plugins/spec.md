@@ -680,11 +680,6 @@ paise2/
 │   │   │   ├── jobs.py            # Job queue providers
 │   │   │   ├── state.py           # State storage providers
 │   │   │   └── cache.py           # Cache providers
-│   │   ├── test_plugins/          # Test plugin simulacra
-│   │   │   ├── extractors.py      # Test content extractors
-│   │   │   ├── sources.py         # Test content sources
-│   │   │   ├── fetchers.py        # Test content fetchers
-│   │   │   └── infrastructure.py  # Test infrastructure providers
 │   ├── config/
 │   │   ├── manager.py            # Configuration management
 │   │   └── models.py             # Configuration data models

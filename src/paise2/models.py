@@ -20,7 +20,6 @@ Content = Union[bytes, str]
 
 # Type aliases for other system components (to be defined by implementations)
 Logger = Any
-Configuration = Any
 
 
 @dataclass(frozen=True)
