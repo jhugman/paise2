@@ -1,0 +1,83 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Tests",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"pytest",
+				"tests/",
+				"-v",
+				"--tb=short"
+			],
+			"group": "test",
+			"problemMatcher": [],
+			"isBackground": false
+		},
+		{
+			"label": "Run MyPy",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"mypy",
+				"src/"
+			],
+			"group": "build",
+			"problemMatcher": [
+				"$mypy"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "Run Ruff Check",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"ruff",
+				"check",
+				"src/",
+				"tests/"
+			],
+			"group": "build",
+			"problemMatcher": [],
+			"isBackground": false
+		},
+		{
+			"label": "Run Ruff Format",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"ruff",
+				"format",
+				"src/",
+				"tests/"
+			],
+			"group": "build",
+			"problemMatcher": [],
+			"isBackground": false
+		},
+		{
+			"label": "Run All Checks",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"--",
+				"bash",
+				"-c",
+				"uv run ruff check src/ tests/ && uv run ruff format --check src/ tests/ && uv run mypy src/ && uv run pytest tests/ -v"
+			],
+			"group": "build",
+			"problemMatcher": [
+				"$mypy"
+			],
+			"isBackground": false,
+			"dependsOrder": "sequence"
+		}
+	]
+}

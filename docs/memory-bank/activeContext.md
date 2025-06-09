@@ -8,20 +8,44 @@
 - Important patterns and preferences
 - Learnings and project insights
 
+# Active Context
+
+## Purpose of this file
+- Current work focus
+- Recent changes
+- Next steps
+- Active decisions and considerations
+- Important patterns and preferences
+- Learnings and project insights
+
 ## Current Work Focus
 
-### PROMPT 2: Protocol Interfaces Foundation (READY TO START)
-PROMPT 1 (Project Foundation and Data Models) is now fully complete with all code quality improvements applied. The project is ready to begin implementing comprehensive Protocol interfaces that define the contract for all extension points in the PAISE2 system.
+### PROMPT 3: Plugin Registration System (READY TO START)
+PROMPT 2 (Protocol Interfaces Foundation) is now fully complete with comprehensive protocol definitions and testing. The project is ready to begin implementing the plugin registration system using pluggy's native approach for discovery and registration of plugin extensions.
 
-### Immediate Priority: Protocol Interface Implementation
-1. **Phase 2 Singleton Protocols**: ConfigurationProvider, DataStorageProvider, JobQueueProvider, StateStorageProvider, CacheProvider
-2. **Phase 4 Processing Protocols**: ContentExtractor, ContentSource, ContentFetcher
-3. **LifecycleAction Protocol**: Plugin lifecycle management interface
-4. **Host Interface Protocols**: BaseHost and specialized host interfaces
-5. **Supporting Protocols**: StateStorage, StateManager, JobQueue, Job dataclass
-6. **Comprehensive Testing**: Unit tests for protocol compliance validation
+### Immediate Priority: Plugin Registration Implementation
+1. **PluginManager Class**: Core plugin manager wrapping pluggy.PluginManager
+2. **Hook Specifications**: Registration hooks for each extension point type
+3. **Plugin Discovery**: Scan paise2 codebase for @hookimpl decorated functions
+4. **External Plugin Support**: Support for external plugin loading
+5. **Plugin Validation**: Ensure registered extensions implement required protocols
+6. **Error Handling**: Robust plugin loading error handling and recovery
+7. **Test Plugins**: Example plugins for testing registration system
+8. **Load Ordering**: Simple discovery order-based plugin loading
 
 ## Recent Changes
+
+### PROMPT 2 COMPLETED (Protocol Interfaces Foundation) - June 9, 2025
+- ✅ **Complete Protocol System**: 15+ protocol classes covering all extension points
+- ✅ **Phase 2 Singleton Protocols**: ConfigurationProvider, DataStorageProvider, JobQueueProvider, StateStorageProvider, CacheProvider
+- ✅ **Phase 4 Processing Protocols**: ContentExtractor, ContentSource, ContentFetcher, LifecycleAction
+- ✅ **Host Interface Hierarchy**: BaseHost → ContentExtractorHost, ContentSourceHost, ContentFetcherHost, LifecycleActionHost
+- ✅ **Supporting Protocols**: StateStorage, StateManager, JobQueue, Job dataclass
+- ✅ **Comprehensive Testing**: 20 protocol compliance tests, 29 total tests passing
+- ✅ **Modern Type System**: `from __future__ import annotations`, Union → |, Optional → |
+- ✅ **Code Quality**: Clean ruff linting with per-file test configuration
+- ✅ **Documentation**: Detailed docstrings for all protocols and methods
+- ✅ **Structural Typing**: Protocol-based validation using typing.Protocol
 
 ### PROMPT 1 COMPLETED (Project Foundation and Data Models) - June 9, 2025
 - ✅ **Modern Project Structure**: Set up uv-based Python project with src layout
@@ -46,35 +70,32 @@ PROMPT 1 (Project Foundation and Data Models) is now fully complete with all cod
 
 ## Next Steps
 
-### Immediate (Current Sprint)
-1. **Create Core Plugin Infrastructure**
-   - `paise2/plugins/core/interfaces.py` - Protocol definitions
-   - `paise2/plugins/core/registry.py` - Plugin registration system
-   - `paise2/plugins/core/manager.py` - Plugin management and discovery
-   - `paise2/plugins/core/startup.py` - Phased startup sequence
+### Immediate (Current Sprint - PROMPT 3)
+1. **Create Plugin Registration System**
+   - `paise2/plugins/core/registry.py` - PluginManager class with pluggy integration
+   - Hook specifications for each extension point registration
+   - Plugin discovery for internal plugins (scan paise2 codebase for @hookimpl)
+   - External plugin discovery support
+   - Plugin validation ensuring protocol compliance
+   - Proper error handling for plugin loading
+   - Test plugins for testing registration system
 
-2. **Implement Essential Extension Points**
-   - ConfigurationProvider (Phase 2)
-   - DataStorageProvider (Phase 2)
-   - JobQueueProvider (Phase 2)
-   - StateStorageProvider (Phase 2)
-   - CacheProvider (Phase 2)
-
-3. **Build Host Interface System**
-   - `paise2/plugins/core/hosts.py` - BaseHost and specialized hosts
-   - State management with automatic partitioning
-   - Configuration access integration
+2. **Plugin Discovery and Loading**
+   - Scan paise2 codebase for @hookimpl decorated functions
+   - External plugin loading support
+   - Simple load ordering (discovery order)
+   - Comprehensive tests for plugin discovery and registration
 
 ### Short Term (Next 2-3 Sprints)
-1. **Complete Phase 4 Extension Points**
-   - ContentExtractor
-   - ContentSource
-   - ContentFetcher
-   - LifecycleAction
+1. **Basic Host Infrastructure (PROMPT 4)**
+   - BaseHost class with shared functionality
+   - StateManager with automatic plugin partitioning
+   - Host factory functions for different host types
 
-2. **Default Provider Implementations**
-   - NoJobQueueProvider (synchronous for development)
-   - SQLiteJobQueueProvider (persistent for production)
+2. **Configuration Provider System (PROMPT 5-7)**
+   - FileConfigurationProvider implementation
+   - Configuration merging logic with proper rules
+   - Integration with plugin system
    - FileConfigurationProvider
    - Basic storage, state, and cache providers
 

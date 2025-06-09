@@ -1,0 +1,14 @@
+{
+    "python.defaultInterpreterPath": ".venv/bin/python",
+    "python.analysis.extraPaths": ["src"],
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.autoSearchPaths": true,
+    "python.terminal.activateEnvironment": true,
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": ["tests"],
+    "python.testing.unittestEnabled": false,
+    "pylsp.plugins.pycodestyle.enabled": false,
+    "pylsp.plugins.pyflakes.enabled": false,
+    "pylsp.plugins.pylint.enabled": false
+}

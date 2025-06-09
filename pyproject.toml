@@ -49,6 +49,12 @@ ignore = [
     "DTZ005",  # datetime.now() without tz (ok for tests)
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "ARG002",  # Unused method arguments in test mock classes
+    "C901",    # Complex functions in comprehensive test cases
+]
+
 [tool.mypy]
 python_version = "3.8"
 warn_return_any = true
