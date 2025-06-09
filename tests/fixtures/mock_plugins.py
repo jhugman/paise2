@@ -341,7 +341,7 @@ class MockCacheProvider:
 
     def create_cache(self, configuration: Configuration) -> CacheManager:
         """Create a test cache manager implementation."""
-        return TestCacheManager()
+        return MockCacheManager()
 
 
 class MockCacheManager:

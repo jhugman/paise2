@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Dict, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from paise2.models import CacheId, Content, ItemId, JobId, Metadata
 
 # Type aliases for clarity
-ConfigurationDict = dict[str, Any]
+ConfigurationDict = Dict[str, Any]
 
 
 @runtime_checkable

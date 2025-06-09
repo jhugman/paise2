@@ -93,7 +93,7 @@ class PluginHooks:
 class PluginManager:
     """Plugin manager that provides registration and discovery using pluggy."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the plugin manager with pluggy integration."""
         self.pm = pluggy.PluginManager("paise2")
         self.pm.add_hookspecs(PluginHooks)
