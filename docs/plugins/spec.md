@@ -593,6 +593,51 @@ def on_configuration_reload(self, host):
 
 This configuration diffing system enables plugins to react efficiently to configuration changes without needing to reload or reinitialize unnecessarily.
 
+#### Startup Configuration Diffing
+
+**Enhanced Feature**: The configuration system also provides diff detection during application startup by comparing the current configuration against the configuration from the previous application run.
+
+**State Storage Integration**: The previous application's merged configuration is persisted using the StateStorage system under a special system partition key (`_system.configuration.last_merged`), enabling cross-session configuration change detection.
+
+**Startup Sequence Integration**: Configuration diffing is integrated into the phased startup sequence:
+
+1. **Phase 2**: Load singleton-contributing extensions (including StateStorageProvider)
+2. **Phase 3**: Create StateStorage singleton
+3. **Phase 3**: Create Configuration singleton:
+   - Collect and merge current configuration
+   - Retrieve previous configuration from StateStorage
+   - Calculate diff between previous and current configuration
+   - Store current configuration in StateStorage for next startup
+   - Expose diff via Configuration protocol
+
+**Plugin Benefits**: This enables plugins to detect configuration changes across application restarts:
+
+```python
+def on_startup(self, host):
+    config = host.configuration
+    diff = config.last_diff
+
+    if diff and config.has_changed("my_plugin.extraction_rules"):
+        # Plugin's extraction rules changed, re-index existing content
+        logger.info("Extraction rules changed, scheduling re-indexing")
+        for item_id in host.state.get_all_keys_with_value("extracted"):
+            host.schedule_job("re_extract", {"item_id": item_id})
+
+    elif diff and config.has_changed("my_plugin.cache_settings"):
+        # Cache settings changed, invalidate plugin cache
+        host.cache.clear_partition("my_plugin")
+
+    elif not diff:
+        # No configuration changes, resume normal operations
+        logger.info("Configuration unchanged, resuming from previous state")
+```
+
+**Use Cases**:
+- **Plugin Updates**: Detect when plugin defaults change and trigger re-processing
+- **State Migration**: Use configuration changes to trigger state schema migrations
+- **Cache Invalidation**: Clear caches when configuration affects cached data
+- **Resume vs Restart Logic**: Differentiate between configuration-driven restarts and simple resumes
+
 ## Cache Management
 
 Plugins have access to a cache, which is segmented by plugin module name. By default it's a file-based cache.

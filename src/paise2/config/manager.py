@@ -112,7 +112,9 @@ class ConfigurationManager:
         return result
 
     def merge_configurations(
-        self, plugin_config: ConfigurationDict, user_config: ConfigurationDict
+        self,
+        plugin_config: ConfigurationDict,
+        user_config: ConfigurationDict,
     ) -> ConfigurationDict:
         """
         Merge plugin defaults with user overrides.

@@ -94,6 +94,16 @@ sequenceDiagram
 **Rationale**: Enables plugins to provide default configurations merged with user overrides in application-wide singleton
 **Implementation**: ConfigurationFactory creates configuration from plugins + user config, validate_configuration_provider ensures protocol compliance
 
+### 9. Configuration Diffing Strategy
+**Decision**: Implement configuration change detection with startup-time diffing and state persistence
+**Rationale**: Enables plugins to react to configuration changes across application restarts without full reinitialization
+**Implementation**: ConfigurationDiffer calculates deep nested diffs, EnhancedMergedConfiguration provides change detection methods, startup diffing integrates with StateStorage for cross-session persistence
+
+### 10. Simplified Diffing Approach
+**Decision**: Modifications appear in both added and removed sections instead of separate modified section
+**Rationale**: Simplifies diff handling for plugins while maintaining complete change information
+**Implementation**: ConfigurationDiffer places old values in removed and new values in added, empty modified section maintained for backwards compatibility
+
 ## Component Relationships
 
 ### Core Components
@@ -217,6 +227,15 @@ graph LR
 5. **User configuration overrides** plugin defaults completely
 6. **Application configuration created** as singleton accessible by all plugins via host
 7. **Plugins access configuration** through host.configuration property
+
+### Configuration Diffing Path
+1. **Startup configuration state loading** from StateStorage (previous merged configuration)
+2. **Current configuration collection** from ConfigurationProviders and user files
+3. **Current configuration merging** using ConfigurationManager with same rules as initial load
+4. **Configuration diff calculation** using ConfigurationDiffer.calculate_diff() comparing previous and current states
+5. **Enhanced configuration creation** with EnhancedMergedConfiguration containing diff information
+6. **Plugin change detection** via configuration.has_changed(), addition(), removal() methods
+7. **Configuration state persistence** to StateStorage for next startup diffing cycle
 
 ## Error Handling Patterns
 

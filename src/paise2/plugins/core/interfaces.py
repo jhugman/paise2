@@ -15,6 +15,21 @@ if TYPE_CHECKING:
 ConfigurationDict = Dict[str, Any]
 
 
+@dataclass(frozen=True)
+class ConfigurationDiff:
+    """
+    Represents the differences between two configuration states.
+
+    Used to track changes during configuration reloads so plugins
+    can react efficiently to configuration changes.
+    """
+
+    added: ConfigurationDict  # New configuration keys/sections
+    removed: ConfigurationDict  # Removed configuration keys/sections
+    modified: ConfigurationDict  # Changed configuration values
+    unchanged: ConfigurationDict  # Configuration that remained the same
+
+
 @runtime_checkable
 class Configuration(Protocol):
     """
@@ -46,6 +61,54 @@ class Configuration(Protocol):
 
         Returns:
             Dictionary containing all values in the section
+        """
+        ...
+
+    def addition(self, key: str, default: Any = None) -> Any:
+        """
+        Get the additions at the key path from the last configuration reload.
+
+        Args:
+            key: Configuration key (can be dotted path like 'plugin.setting')
+            default: Default value if no additions exist at that path
+
+        Returns:
+            Added configuration value or default
+        """
+        ...
+
+    def removal(self, key: str, default: Any = None) -> Any:
+        """
+        Get the removals at the key path from the last configuration reload.
+
+        Args:
+            key: Configuration key (can be dotted path like 'plugin.setting')
+            default: Default value if no removals exist at that path
+
+        Returns:
+            Removed configuration value or default
+        """
+        ...
+
+    def has_changed(self, key: str) -> bool:
+        """
+        Check if a specific configuration key changed in the last reload.
+
+        Args:
+            key: Configuration key to check
+
+        Returns:
+            True if the key changed, False otherwise
+        """
+        ...
+
+    @property
+    def last_diff(self) -> ConfigurationDiff | None:
+        """
+        Get the last configuration diff from a reload operation.
+
+        Returns:
+            ConfigurationDiff object or None if no diff available
         """
         ...
 
