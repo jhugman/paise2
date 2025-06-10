@@ -32,8 +32,8 @@
 - **uv.lock** for reproducible builds
 
 ### Code Quality Tools
-- **mypy**: Static type checking - configured and passing
-- **pytest**: Testing framework - 29 tests passing
+- **mypy**: Static type checking - configured and passing in strict mode
+- **pytest**: Testing framework - 147 tests passing
 - **ruff**: Linting and formatting - configured with per-file ignores
 
 ### Development Setup
@@ -192,6 +192,23 @@ async def process_jobs():
         if job:
             await process_job(job)
             await job_queue.complete(job.job_id)
+```
+
+### State Storage Integration
+```python
+# State storage with automatic partitioning
+class StateStorage(Protocol):
+    def store(self, partition_key: str, key: str, value: Any, version: int) -> None
+    def get(self, partition_key: str, key: str, default: Any = None) -> Any
+
+# Automatic partitioning by plugin module name
+class StateManager:
+    def __init__(self, storage: StateStorage, plugin_module: str):
+        self.storage = storage
+        self.plugin_module = plugin_module
+
+    def store(self, key: str, value: Any, version: int = 1) -> None:
+        self.storage.store(self.plugin_module, key, value, version)
 ```
 
 ## Development Workflow

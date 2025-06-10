@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Any
+from typing import Any, Dict
 
 from paise2.plugins.core.interfaces import ConfigurationDiff
 
@@ -91,7 +91,9 @@ class ConfigurationDiffer:
         return bool(value1 == value2)
 
     @staticmethod
-    def _calculate_nested_diff(old_dict: dict, new_dict: dict) -> dict:  # noqa: C901, PLR0912
+    def _calculate_nested_diff(
+        old_dict: Dict[str, Any], new_dict: Dict[str, Any]
+    ) -> Dict[str, Any]:  # noqa: C901, PLR0912
         """
         Calculate diff for nested dictionaries.
 
@@ -166,13 +168,12 @@ class ConfigurationDiffer:
         path_parts = path.split(".")
 
         # Check if path was added or removed
-        return (
-            ConfigurationDiffer._path_exists_in_dict(diff.added, path_parts)
-            or ConfigurationDiffer._path_exists_in_dict(diff.removed, path_parts)
-        )
+        return ConfigurationDiffer._path_exists_in_dict(
+            diff.added, path_parts
+        ) or ConfigurationDiffer._path_exists_in_dict(diff.removed, path_parts)
 
     @staticmethod
-    def _path_exists_in_dict(d: dict, path_parts: list[str]) -> bool:
+    def _path_exists_in_dict(d: Dict[str, Any], path_parts: list[str]) -> bool:
         """Check if a dotted path exists in a dictionary."""
         current = d
         for part in path_parts:
@@ -183,7 +184,7 @@ class ConfigurationDiffer:
 
     @staticmethod
     def get_path_value_from_diff_dict(
-        d: dict, path_parts: list[str], default: Any = None
+        d: Dict[str, Any], path_parts: list[str], default: Any = None
     ) -> Any:
         """Get a value from a diff dictionary using a dotted path."""
         current = d

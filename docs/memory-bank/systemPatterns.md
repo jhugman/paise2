@@ -104,6 +104,11 @@ sequenceDiagram
 **Rationale**: Simplifies diff handling for plugins while maintaining complete change information
 **Implementation**: ConfigurationDiffer places old values in removed and new values in added, empty modified section maintained for backwards compatibility
 
+### 11. State Storage Provider System
+**Decision**: Automatic partitioning by plugin module name with versioning support
+**Rationale**: Complete isolation between plugins prevents state interference while versioning enables plugin evolution
+**Implementation**: StateEntry dataclass with partition_key/key/value/version, SQLite and memory providers, automatic partitioning by inspecting call stack
+
 ## Component Relationships
 
 ### Core Components

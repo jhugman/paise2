@@ -245,14 +245,10 @@ class TestEnhancedMergedConfiguration:
             added={
                 "plugin_a": {
                     "section1": {"setting1": "new_value"},
-                    "section2": {"setting2": "value2"}
+                    "section2": {"setting2": "value2"},
                 }
             },
-            removed={
-                "plugin_a": {
-                    "section1": {"setting1": "old_value"}
-                }
-            },
+            removed={"plugin_a": {"section1": {"setting1": "old_value"}}},
             modified={},  # Empty with new approach
             unchanged={},
         )
