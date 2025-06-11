@@ -1,3 +1,7 @@
+# This project uses 'uv' for dependency management, NOT 'pip'
+# Use: uv add <package>, uv run pytest, etc.
+# See README.dev.md for full details
+
 [project]
 name = "paise2"
 version = "0.1.0"
