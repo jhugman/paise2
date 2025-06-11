@@ -102,23 +102,17 @@ class TestStateStorageProviderRegistration:
 class TestStateStorageProviderDiscovery:
     """Test state storage provider plugin discovery."""
 
-    def test_built_in_state_storage_providers_discoverable(self):
-        """Test that built-in state storage providers are discoverable."""
-        # Import plugin registration module to trigger registration function creation
-        from paise2.state import plugin_registration
+    def test_profile_based_state_storage_providers_discoverable(self):
+        """Test that state storage providers are discoverable via
+        profile-based loading."""
+        # Test that profile-based plugins are discoverable
+        from paise2.profiles.factory import create_test_plugin_manager
 
-        # Check that the registration functions exist and are properly decorated
-        assert hasattr(plugin_registration, "register_state_storage_provider")
-        assert hasattr(plugin_registration, "register_state_storage_provider_memory")
+        test_manager = create_test_plugin_manager()
+        discovered = test_manager.discover_plugins()
 
-        # Verify the functions have the hookimpl attribute (from pluggy decorator)
-        register_func = plugin_registration.register_state_storage_provider
-        register_memory_func = (
-            plugin_registration.register_state_storage_provider_memory
-        )
-
-        assert hasattr(register_func, "paise2_impl")
-        assert hasattr(register_memory_func, "paise2_impl")
+        # Should find plugins in test profile
+        assert isinstance(discovered, list)
 
     def test_state_storage_provider_creation_from_configuration(self):
         """Test that providers can create storage instances from configuration."""

@@ -36,6 +36,15 @@ Plugins can provide multiple extensions for one or more different extension poin
 - **External plugins**: Use pluggy's standard discovery mechanisms for third-party plugins
 - **Load order**: Simple discovery order within each phase (first found, first loaded)
 
+#### Profile-Based Plugin Loading
+
+The plugin system supports profile-based loading for context-dependent plugin selection. Profiles (`production`, `development`, `test`) contain different plugin combinations to eliminate singleton provider selection complexity.
+
+```python
+from paise2.profiles.factory import create_test_plugin_manager
+plugin_manager = create_test_plugin_manager()
+```
+
 ### Extension Point-Based Startup Sequence
 
 The system uses a phased startup approach segmented by extension point types to handle the delicate startup sequence when singletons are contributed to by plugins:

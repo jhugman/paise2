@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -40,7 +40,7 @@ class ConfigurationFactory:
     def create_configuration(
         self,
         plugin_manager: PluginManager,
-        user_config_dict: Dict[str, Any] | None = None,
+        user_config_dict: dict[str, Any] | None = None,
         config_file_path: str | None = None,
     ) -> Configuration:
         """
@@ -103,10 +103,10 @@ class ConfigurationFactory:
 
     def _apply_user_overrides(
         self,
-        plugin_config: Dict[str, Any],
-        user_config_dict: Dict[str, Any] | None,
+        plugin_config: dict[str, Any],
+        user_config_dict: dict[str, Any] | None,
         config_file_path: str | None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Apply user configuration overrides to plugin configuration.
 

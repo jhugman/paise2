@@ -93,10 +93,19 @@ class PluginHooks:
 class PluginManager:
     """Plugin manager that provides registration and discovery using pluggy."""
 
-    def __init__(self) -> None:
-        """Initialize the plugin manager with pluggy integration."""
+    def __init__(self, profile: str | None = None) -> None:
+        """
+        Initialize the plugin manager with pluggy integration.
+
+        Args:
+            paise2_root: Root path for plugin discovery. If None, uses paise2.__file__.
+                        Can be set to discover plugins from different profiles/contexts.
+        """
         self.pm = pluggy.PluginManager("paise2")
         self.pm.add_hookspecs(PluginHooks)
+
+        # Set plugin discovery root (for profile-based plugin loading)
+        self._profile = Path(profile) if profile else None
 
         # Plugin storage
         self._configuration_providers: list[ConfigurationProvider] = []
@@ -111,35 +120,39 @@ class PluginManager:
 
     def discover_plugins(self) -> list[str]:
         """Discover and load both internal and external plugins."""
-        discovered = self._discover_internal_plugins()
+        discovered = self._discover_internal_plugins(self._profile)
         self._discover_external_plugins()
         return discovered
 
-    def discover_internal_plugins(self) -> list[str]:
+    def discover_internal_plugins(self, profile_dir: Path | None = None) -> list[str]:
         """Discover internal plugins by scanning the paise2 package."""
-        return self._discover_internal_plugins()
+        return self._discover_internal_plugins(profile_dir or self._profile)
 
     def discover_external_plugins(self) -> None:
         """Discover external plugins via setuptools entry points."""
         return self._discover_external_plugins()
 
-    def _discover_internal_plugins(self) -> list[str]:
+    def _discover_internal_plugins(self, profile_dir: Path | None) -> list[str]:
         """Discover internal plugins by scanning the paise2 package."""
-        discovered_modules = []
+        discovered_modules: list[str] = []
+        if profile_dir is None:
+            return discovered_modules
 
         try:
-            # Get the root of the paise2 package
-            paise2_root = Path(paise2.__file__).parent
-            logger.debug("Scanning paise2 package at: %s", paise2_root)
+            # Use the configured paise2 root for plugin discovery
+            logger.debug("Scanning paise2 package at: %s", profile_dir)
 
             # Scan all Python files in the paise2 package
-            for py_file in paise2_root.rglob("*.py"):
+            for py_file in profile_dir.rglob("*.py"):
                 if py_file.name.startswith("__"):
                     continue
 
                 try:
                     # Convert file path to module name
-                    rel_path = py_file.relative_to(paise2_root.parent)
+                    # For profile-based loading, calculate module name relative to
+                    # the main paise2 package
+                    paise2_package_root = Path(paise2.__file__).parent.parent
+                    rel_path = py_file.relative_to(paise2_package_root)
                     module_name = str(rel_path.with_suffix("")).replace("/", ".")
 
                     # Check if file contains @hookimpl decorators

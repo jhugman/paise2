@@ -5,6 +5,9 @@ from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
+import paise2
+import paise2.profiles
+import paise2.profiles.test
 from paise2.plugins.core.interfaces import (
     ContentExtractor,
 )
@@ -348,7 +351,7 @@ class TestLogging:
         """Test that plugin discovery events are logged."""
         from paise2.plugins.core.registry import PluginManager
 
-        manager = PluginManager()
+        manager = PluginManager(profile=paise2.profiles.test.__file__)
 
         # Test that discovery logs information (we'll check logger was called)
         with patch("paise2.plugins.core.registry.logger") as mock_logger:

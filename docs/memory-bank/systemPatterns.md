@@ -109,6 +109,11 @@ sequenceDiagram
 **Rationale**: Complete isolation between plugins prevents state interference while versioning enables plugin evolution
 **Implementation**: StateEntry dataclass with partition_key/key/value/version, SQLite and memory providers, automatic partitioning by inspecting call stack
 
+### 12. Profile-Based Plugin Loading System
+**Decision**: Context-dependent plugin loading through profile-specific directories
+**Rationale**: Resolves singleton StateManager selection complexity by loading different provider combinations per execution environment
+**Implementation**: Profile directories with environment-specific plugin registration, enhanced PluginManager with configurable `paise2_root`
+
 ## Component Relationships
 
 ### Core Components

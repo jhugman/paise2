@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict
+from typing import Any
 
 from paise2.plugins.core.interfaces import ConfigurationDiff
 
@@ -91,9 +91,9 @@ class ConfigurationDiffer:
         return bool(value1 == value2)
 
     @staticmethod
-    def _calculate_nested_diff(
-        old_dict: Dict[str, Any], new_dict: Dict[str, Any]
-    ) -> Dict[str, Any]:  # noqa: C901, PLR0912
+    def _calculate_nested_diff(  # noqa: C901, PLR0912
+        old_dict: dict[str, Any], new_dict: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Calculate diff for nested dictionaries.
 
@@ -173,7 +173,7 @@ class ConfigurationDiffer:
         ) or ConfigurationDiffer._path_exists_in_dict(diff.removed, path_parts)
 
     @staticmethod
-    def _path_exists_in_dict(d: Dict[str, Any], path_parts: list[str]) -> bool:
+    def _path_exists_in_dict(d: dict[str, Any], path_parts: list[str]) -> bool:
         """Check if a dotted path exists in a dictionary."""
         current = d
         for part in path_parts:
@@ -184,7 +184,7 @@ class ConfigurationDiffer:
 
     @staticmethod
     def get_path_value_from_diff_dict(
-        d: Dict[str, Any], path_parts: list[str], default: Any = None
+        d: dict[str, Any], path_parts: list[str], default: Any = None
     ) -> Any:
         """Get a value from a diff dictionary using a dotted path."""
         current = d

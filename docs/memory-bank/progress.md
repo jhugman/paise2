@@ -128,6 +128,12 @@
 - ✅ **Integration Ready**: State storage system fully integrated with plugin registration system
 - ✅ **Final Status**: All 147 tests passing, ready for PROMPT 9
 
+### Profile-Based Plugin Loading System (COMPLETED June 11, 2025)
+- ✅ **Profile System**: Context-dependent plugin loading (production, development, test)
+- ✅ **Enhanced PluginManager**: Optional `paise2_root` parameter for custom plugin discovery
+- ✅ **Factory Functions**: Helper functions for profile-specific plugin managers
+- ✅ **Final Status**: All 155 tests passing, resolves StateManager singleton selection complexity
+
 ## What's Left to Build (Remaining Work)
 
 ### Phase 3: Provider Infrastructure (PROMPT 9-11)
@@ -173,7 +179,8 @@
 - **PROMPT 6 COMPLETED**: Configuration integration with plugin system fully implemented with singleton patterns and comprehensive integration testing
 - **PROMPT 7 COMPLETED**: Configuration system refinement with configuration diffing, change detection, and startup diffing design
 - **PROMPT 8 COMPLETED**: State Storage Provider System fully implemented with automatic partitioning, versioning, memory and file-based providers, and comprehensive testing
-- **Test Suite**: 147/147 tests passing (9 data models + 20 interfaces + 23 registry + 16 host + 12 configuration + 18 integration + 26 configuration diffing + 34 state storage + 9 additional tests)
+- **PROFILE-BASED PLUGIN LOADING COMPLETED (June 11, 2025)**: Profile-based plugin loading system fully implemented to resolve StateManager singleton selection issues and enable context-dependent plugin loading
+- **Test Suite**: 155/155 tests passing (includes 8 new profile-based plugin tests)
 - **Code Quality**: All ruff linting checks passing and full mypy compliance in strict mode
 - **Type Safety**: Complete static type checking compliance with comprehensive protocols and proper type annotations
 - **Modern Codebase**: Python 3.9+ type annotations, pathlib.Path usage, comprehensive protocols

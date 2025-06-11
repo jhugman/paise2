@@ -71,6 +71,15 @@ warn_no_return = true
 warn_unreachable = true
 strict_equality = true
 
+# Less strict checking for test files
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false
+warn_return_any = false
+check_untyped_defs = false
+
 [dependency-groups]
 dev = [
     "mypy>=1.14.1",

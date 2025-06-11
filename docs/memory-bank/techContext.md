@@ -98,7 +98,7 @@ paise2/
 ### Module Organization
 - **plugins/core**: Core plugin system infrastructure (interfaces, registration, management)
 - **plugins/providers**: Default implementations of infrastructure providers
-- **plugins/core**: Core plugin system implementation (interfaces, registry)
+- **profiles**: Profile-based plugin loading system (production, development, test)
 - **config**: Configuration loading and merging system
 - **storage**: Data storage abstractions and models
 - **state**: Plugin state management system
