@@ -12,12 +12,13 @@ from paise2.state.providers import (
     MemoryStateStorage,
     MemoryStateStorageProvider,
 )
+from tests.fixtures import MockConfiguration
 
 
 class TestStateEntry:
     """Test StateEntry data model."""
 
-    def test_state_entry_creation(self):
+    def test_state_entry_creation(self) -> None:
         """Test StateEntry creation with all fields."""
         entry = StateEntry(
             partition_key="test.plugin",
@@ -31,7 +32,7 @@ class TestStateEntry:
         assert entry.value == {"data": "value"}
         assert entry.version == 2
 
-    def test_state_entry_with_value(self):
+    def test_state_entry_with_value(self) -> None:
         """Test StateEntry immutable value update."""
         original = StateEntry("test.plugin", "key", "old_value", 1)
         updated = original.with_value("new_value")
@@ -46,7 +47,7 @@ class TestStateEntry:
         assert updated.partition_key == "test.plugin"
         assert updated.key == "key"
 
-    def test_state_entry_with_version(self):
+    def test_state_entry_with_version(self) -> None:
         """Test StateEntry immutable version update."""
         original = StateEntry("test.plugin", "key", "value", 1)
         updated = original.with_version(3)
@@ -65,12 +66,12 @@ class TestStateEntry:
 class TestMemoryStateStorage:
     """Test MemoryStateStorage implementation."""
 
-    def test_memory_state_storage_implements_protocol(self):
+    def test_memory_state_storage_implements_protocol(self) -> None:
         """Test that MemoryStateStorage implements StateStorage protocol."""
         storage = MemoryStateStorage()
         assert isinstance(storage, StateStorage)
 
-    def test_store_and_get_basic_operations(self):
+    def test_store_and_get_basic_operations(self) -> None:
         """Test basic store and get operations."""
         storage = MemoryStateStorage()
 
@@ -79,14 +80,14 @@ class TestMemoryStateStorage:
         result = storage.get("plugin1", "key1")
         assert result == "value1"
 
-    def test_get_with_default_value(self):
+    def test_get_with_default_value(self) -> None:
         """Test get operation with default value for missing keys."""
         storage = MemoryStateStorage()
 
         result = storage.get("plugin1", "missing_key", "default")
         assert result == "default"
 
-    def test_automatic_partitioning_isolation(self):
+    def test_automatic_partitioning_isolation(self) -> None:
         """Test that partitions are properly isolated."""
         storage = MemoryStateStorage()
 
@@ -98,7 +99,7 @@ class TestMemoryStateStorage:
         assert storage.get("plugin1", "key") == "value1"
         assert storage.get("plugin2", "key") == "value2"
 
-    def test_versioning_support(self):
+    def test_versioning_support(self) -> None:
         """Test state versioning for plugin updates."""
         storage = MemoryStateStorage()
 
@@ -115,7 +116,7 @@ class TestMemoryStateStorage:
         assert ("key1", "value1", 1) in versioned_state
         assert ("key2", "value2", 2) in versioned_state
 
-    def test_get_all_keys_with_value(self):
+    def test_get_all_keys_with_value(self) -> None:
         """Test querying keys by value."""
         storage = MemoryStateStorage()
 
@@ -132,7 +133,7 @@ class TestMemoryStateStorage:
         assert "key3" in keys
         assert "key2" not in keys
 
-    def test_overwrite_existing_key(self):
+    def test_overwrite_existing_key(self) -> None:
         """Test that storing overwrites existing values."""
         storage = MemoryStateStorage()
 
@@ -150,27 +151,27 @@ class TestMemoryStateStorage:
 class TestMemoryStateStorageProvider:
     """Test MemoryStateStorageProvider implementation."""
 
-    def test_memory_provider_implements_protocol(self):
+    def test_memory_provider_implements_protocol(self) -> None:
         """Test MemoryStateStorageProvider implements StateStorageProvider protocol."""
         provider = MemoryStateStorageProvider()
         assert isinstance(provider, StateStorageProvider)
 
-    def test_memory_provider_creates_storage(self):
+    def test_memory_provider_creates_storage(self) -> None:
         """Test that provider creates StateStorage instance."""
         provider = MemoryStateStorageProvider()
-        configuration = {"test": "config"}
+        configuration = MockConfiguration({"test": "config"})
 
         storage = provider.create_state_storage(configuration)
 
         assert isinstance(storage, StateStorage)
         assert isinstance(storage, MemoryStateStorage)
 
-    def test_multiple_storages_are_independent(self):
+    def test_multiple_storages_are_independent(self) -> None:
         """Test that multiple storage instances are independent."""
         provider = MemoryStateStorageProvider()
 
-        storage1 = provider.create_state_storage({})
-        storage2 = provider.create_state_storage({})
+        storage1 = provider.create_state_storage(MockConfiguration({}))
+        storage2 = provider.create_state_storage(MockConfiguration({}))
 
         # Store in first storage
         storage1.store("plugin1", "key", "value1")
@@ -182,13 +183,13 @@ class TestMemoryStateStorageProvider:
 class TestFileStateStorage:
     """Test FileStateStorage implementation."""
 
-    def test_file_state_storage_implements_protocol(self):
+    def test_file_state_storage_implements_protocol(self) -> None:
         """Test that FileStateStorage implements StateStorage protocol."""
         with tempfile.TemporaryDirectory() as temp_dir:
             storage = FileStateStorage(Path(temp_dir) / "state.db")
             assert isinstance(storage, StateStorage)
 
-    def test_store_and_get_with_persistence(self):
+    def test_store_and_get_with_persistence(self) -> None:
         """Test basic store and get operations with file persistence."""
         with tempfile.TemporaryDirectory() as temp_dir:
             state_file = Path(temp_dir) / "state.db"
@@ -204,7 +205,7 @@ class TestFileStateStorage:
             result = storage2.get("plugin1", "key1")
             assert result == "value1"
 
-    def test_file_storage_partitioning(self):
+    def test_file_storage_partitioning(self) -> None:
         """Test partitioning isolation in file storage."""
         with tempfile.TemporaryDirectory() as temp_dir:
             storage = FileStateStorage(Path(temp_dir) / "state.db")
@@ -217,7 +218,7 @@ class TestFileStateStorage:
             assert storage.get("plugin1", "key") == "value1"
             assert storage.get("plugin2", "key") == "value2"
 
-    def test_file_storage_versioning(self):
+    def test_file_storage_versioning(self) -> None:
         """Test versioning with file persistence."""
         with tempfile.TemporaryDirectory() as temp_dir:
             storage = FileStateStorage(Path(temp_dir) / "state.db")
@@ -236,7 +237,7 @@ class TestFileStateStorage:
             assert ("key1", "value1", 1) in versioned_state
             assert ("key2", "value2", 2) in versioned_state
 
-    def test_file_storage_get_all_keys_with_value(self):
+    def test_file_storage_get_all_keys_with_value(self) -> None:
         """Test querying keys by value with file storage."""
         with tempfile.TemporaryDirectory() as temp_dir:
             storage = FileStateStorage(Path(temp_dir) / "state.db")
@@ -257,28 +258,28 @@ class TestFileStateStorage:
 class TestFileStateStorageProvider:
     """Test FileStateStorageProvider implementation."""
 
-    def test_file_provider_implements_protocol(self):
+    def test_file_provider_implements_protocol(self) -> None:
         """Test FileStateStorageProvider implements StateStorageProvider protocol."""
         provider = FileStateStorageProvider()
         assert isinstance(provider, StateStorageProvider)
 
-    def test_file_provider_creates_storage_with_default_path(self):
+    def test_file_provider_creates_storage_with_default_path(self) -> None:
         """Test provider creates storage with default path configuration."""
         provider = FileStateStorageProvider()
-        configuration = {}
+        configuration = MockConfiguration({})
 
         storage = provider.create_state_storage(configuration)
 
         assert isinstance(storage, StateStorage)
         assert isinstance(storage, FileStateStorage)
 
-    def test_file_provider_creates_storage_with_custom_path(self):
+    def test_file_provider_creates_storage_with_custom_path(self) -> None:
         """Test provider creates storage with custom path from configuration."""
         with tempfile.TemporaryDirectory() as temp_dir:
             custom_path = str(Path(temp_dir) / "custom_state.db")
             provider = FileStateStorageProvider()
-            configuration = {"state_storage.file_path": custom_path}
-
+            configuration = MockConfiguration({"state_storage.file_path": custom_path})
+            assert configuration.get("state_storage.file_path", None) is custom_path
             storage = provider.create_state_storage(configuration)
 
             assert isinstance(storage, FileStateStorage)
@@ -290,10 +291,12 @@ class TestFileStateStorageProvider:
             # File should exist at custom path
             assert Path(custom_path).exists()
 
-    def test_file_provider_handles_path_expansion(self):
+    def test_file_provider_handles_path_expansion(self) -> None:
         """Test provider handles path expansion (~ for home directory)."""
         provider = FileStateStorageProvider()
-        configuration = {"state_storage.file_path": "~/test_state.db"}
+        configuration = MockConfiguration(
+            {"state_storage.file_path": "~/test_state.db"}
+        )
 
         storage = provider.create_state_storage(configuration)
 
@@ -305,7 +308,7 @@ class TestFileStateStorageProvider:
 class TestStateStorageIntegration:
     """Integration tests for state storage system."""
 
-    def test_memory_storage_integration_with_state_manager(self):
+    def test_memory_storage_integration_with_state_manager(self) -> None:
         """Test memory storage integration with ConcreteStateManager."""
         from paise2.plugins.core.hosts import ConcreteStateManager
 
@@ -322,7 +325,7 @@ class TestStateStorageIntegration:
         direct_result = storage.get("test.plugin", "key")
         assert direct_result == "value"
 
-    def test_file_storage_integration_with_state_manager(self):
+    def test_file_storage_integration_with_state_manager(self) -> None:
         """Test file storage integration with ConcreteStateManager."""
         from paise2.plugins.core.hosts import ConcreteStateManager
 

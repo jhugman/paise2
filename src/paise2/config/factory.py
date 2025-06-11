@@ -7,12 +7,14 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
-from .manager import ConfigurationManager, MergedConfiguration
+from .diffing import ConcreteConfiguration
+from .manager import ConfigurationManager
 
 if TYPE_CHECKING:
+    from paise2.plugins.core.interfaces import Configuration
     from paise2.plugins.core.registry import PluginManager
 
-    from .models import Configuration, ConfigurationDict
+    from .models import ConfigurationDict
 
 __all__ = ["ConfigurationFactory"]
 
@@ -72,7 +74,7 @@ class ConfigurationFactory:
         )
 
         # Step 4: Create configuration instance
-        return MergedConfiguration(final_config)
+        return ConcreteConfiguration(final_config)
 
     def _collect_plugin_configurations(
         self, plugin_manager: PluginManager

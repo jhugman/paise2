@@ -3,23 +3,21 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any
 from unittest.mock import Mock
 
 import yaml
 
-from paise2.config.manager import ConfigurationManager, MergedConfiguration
-from paise2.plugins.core.interfaces import ConfigurationProvider
+from paise2.config.diffing import ConcreteConfiguration
+from paise2.config.manager import ConfigurationManager
+from paise2.plugins.core.interfaces import Configuration, ConfigurationProvider
 from paise2.plugins.core.registry import PluginManager
-
-if TYPE_CHECKING:
-    from paise2.config.models import Configuration
 
 
 class MockConfigProvider(ConfigurationProvider):
     """Mock configuration provider for testing."""
 
-    def __init__(self, config_data: str, config_id: str = "test_config"):
+    def __init__(self, config_data: str, config_id: str = "test_config") -> None:
         self._config_data = config_data
         self._config_id = config_id
 
@@ -33,7 +31,7 @@ class MockConfigProvider(ConfigurationProvider):
 class TestConfigurationSingleton:
     """Test configuration singleton creation and management."""
 
-    def test_create_configuration_singleton_from_plugins(self):
+    def test_create_configuration_singleton_from_plugins(self) -> None:
         """Test creating a single configuration instance from multiple providers."""
         # Setup plugin manager with providers
         plugin_manager = PluginManager()
@@ -62,7 +60,7 @@ class TestConfigurationSingleton:
                 config_dicts.append(config_data)
 
         merged_config = config_manager.merge_plugin_configurations(config_dicts)
-        configuration = MergedConfiguration(merged_config)
+        configuration = ConcreteConfiguration(merged_config)
 
         # Test the singleton configuration
         assert configuration.get("app.name") == "MyApp"
@@ -73,7 +71,7 @@ class TestConfigurationSingleton:
         assert configuration.get("plugin2.max_connections") == 100
         assert configuration.get("plugin2.retries") == 3
 
-    def test_configuration_singleton_with_user_overrides(self):
+    def test_configuration_singleton_with_user_overrides(self) -> None:
         """Test configuration singleton creation with user configuration file."""
         # Plugin configuration
         plugin_manager = PluginManager()
@@ -105,7 +103,7 @@ class TestConfigurationSingleton:
         merged_config = config_manager.merge_with_user_overrides(
             plugin_config_data, user_config
         )
-        configuration = MergedConfiguration(merged_config)
+        configuration = ConcreteConfiguration(merged_config)
 
         # Test merged values
         assert configuration.get("app.debug") is True  # User override
@@ -114,7 +112,7 @@ class TestConfigurationSingleton:
         assert configuration.get("logging.level") == "DEBUG"  # User override
         assert configuration.get("logging.format") == "basic"  # Plugin default kept
 
-    def test_configuration_factory_pattern(self):
+    def test_configuration_factory_pattern(self) -> None:
         """Test factory pattern for configuration creation."""
 
         def create_application_configuration(
@@ -141,7 +139,7 @@ class TestConfigurationSingleton:
             else:
                 final_config = merged_plugins
 
-            return MergedConfiguration(final_config)
+            return ConcreteConfiguration(final_config)
 
         # Test the factory
         plugin_manager = PluginManager()
@@ -161,15 +159,15 @@ class TestConfigurationSingleton:
 class TestHostConfigurationIntegration:
     """Test configuration integration with host creation."""
 
-    def test_host_factory_with_configuration_injection(self):
+    def test_host_factory_with_configuration_injection(self) -> None:
         """Test host factory that injects configuration dependency."""
         from paise2.plugins.core.hosts import BaseHost
 
         def create_host_with_config(
             plugin_module_name: str,
             configuration: Configuration,
-            logger=None,
-            state_storage=None,
+            logger: Any = None,
+            state_storage: Any = None,
         ) -> BaseHost:
             """Factory to create host with configuration dependency injection."""
             return BaseHost(
@@ -181,7 +179,7 @@ class TestHostConfigurationIntegration:
 
         # Create configuration
         config_data = {"plugin": {"setting": "value"}}
-        configuration = MergedConfiguration(config_data)
+        configuration = ConcreteConfiguration(config_data)
 
         # Create host with injected configuration
         host = create_host_with_config("test.plugin", configuration)
@@ -190,7 +188,7 @@ class TestHostConfigurationIntegration:
         assert host.configuration is configuration
         assert host.configuration.get("plugin.setting") == "value"
 
-    def test_multiple_hosts_share_same_configuration(self):
+    def test_multiple_hosts_share_same_configuration(self) -> None:
         """Test that multiple hosts can share the same configuration singleton."""
         from paise2.plugins.core.hosts import BaseHost
 
@@ -200,7 +198,7 @@ class TestHostConfigurationIntegration:
             "plugin1": {"enabled": True},
             "plugin2": {"max_size": 1000},
         }
-        configuration = MergedConfiguration(config_data)
+        configuration = ConcreteConfiguration(config_data)
 
         # Create multiple hosts with same configuration
         host1 = BaseHost(

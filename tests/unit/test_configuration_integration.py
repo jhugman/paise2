@@ -3,19 +3,20 @@
 
 from __future__ import annotations
 
-from unittest.mock import Mock
-
 import pytest
 
-from paise2.config.manager import ConfigurationManager, MergedConfiguration
+from paise2.config.diffing import ConcreteConfiguration
+from paise2.config.manager import ConfigurationManager
 from paise2.plugins.core.interfaces import ConfigurationProvider
 from paise2.plugins.core.registry import PluginManager
+from paise2.utils.logging import SimpleInMemoryLogger
+from tests.fixtures import MockConfiguration, MockStateStorage
 
 
 class MockConfigurationProvider(ConfigurationProvider):
     """Mock configuration provider for testing."""
 
-    def __init__(self, config_data: str, config_id: str = "test_config"):
+    def __init__(self, config_data: str, config_id: str = "test_config") -> None:
         self._config_data = config_data
         self._config_id = config_id
 
@@ -29,7 +30,7 @@ class MockConfigurationProvider(ConfigurationProvider):
 class TestConfigurationProviderRegistration:
     """Test configuration provider registration with plugin system."""
 
-    def test_plugin_manager_accepts_configuration_provider(self):
+    def test_plugin_manager_accepts_configuration_provider(self) -> None:
         """Test that plugin manager can register configuration providers."""
         manager = PluginManager()
         provider = MockConfigurationProvider("test: value")
@@ -42,7 +43,7 @@ class TestConfigurationProviderRegistration:
         assert len(providers) == 1
         assert providers[0] is provider
 
-    def test_get_configuration_providers(self):
+    def test_get_configuration_providers(self) -> None:
         """Test getting registered configuration providers."""
         manager = PluginManager()
         provider1 = MockConfigurationProvider("config1: value1", "config1")
@@ -57,7 +58,7 @@ class TestConfigurationProviderRegistration:
         assert provider1 in providers
         assert provider2 in providers
 
-    def test_configuration_provider_validation(self):
+    def test_configuration_provider_validation(self) -> None:
         """Test that configuration providers are validated."""
         manager = PluginManager()
 
@@ -66,21 +67,23 @@ class TestConfigurationProviderRegistration:
         manager.validate_configuration_provider(valid_provider)
 
         # Invalid provider should raise
-        invalid_provider = Mock()
-        del invalid_provider.get_default_configuration  # Remove required method
+        class Invalid:
+            pass
+
+        invalid_provider = Invalid()
 
         with pytest.raises(AttributeError):
-            manager.validate_configuration_provider(invalid_provider)
+            manager.validate_configuration_provider(invalid_provider)  # type: ignore[arg-type]
 
 
 class TestConfigurationSingletonCreation:
     """Test configuration singleton creation logic."""
 
-    def test_create_configuration_from_providers(self):
+    def test_create_configuration_from_providers(self) -> None:
         """Test creating configuration singleton from providers."""
         # Setup providers
         provider1 = MockConfigurationProvider(
-            "plugin1:\n  setting1: value1\n  setting2: default2"
+            "plugin1:\n  setting1: value1\n  setting2: 42"
         )
         provider2 = MockConfigurationProvider(
             "plugin1:\n  setting2: value2\nplugin2:\n  setting3: value3"
@@ -102,14 +105,14 @@ class TestConfigurationSingletonCreation:
 
         # Merge configurations
         merged_config = config_manager.merge_plugin_configurations(config_dicts)
-        configuration = MergedConfiguration(merged_config)
+        configuration = ConcreteConfiguration(merged_config)
 
         # Test merged configuration
         assert configuration.get("plugin1.setting1") == "value1"
         assert configuration.get("plugin1.setting2") == "value2"  # Later provider wins
         assert configuration.get("plugin2.setting3") == "value3"
 
-    def test_create_configuration_with_user_overrides(self):
+    def test_create_configuration_with_user_overrides(self) -> None:
         """Test configuration creation with user overrides."""
         # Plugin default config
         provider = MockConfigurationProvider("app:\n  debug: false\n  timeout: 30")
@@ -133,7 +136,7 @@ class TestConfigurationSingletonCreation:
         merged_config = config_manager.merge_with_user_overrides(
             plugin_config or {}, user_config
         )
-        configuration = MergedConfiguration(merged_config)
+        configuration = ConcreteConfiguration(merged_config)
 
         # Test values
         assert configuration.get("app.debug") is True  # User override
@@ -144,14 +147,14 @@ class TestConfigurationSingletonCreation:
 class TestBaseHostConfigurationAccess:
     """Test configuration access through BaseHost."""
 
-    def test_base_host_has_configuration_property(self):
+    def test_base_host_has_configuration_property(self) -> None:
         """Test that BaseHost provides configuration access."""
         from paise2.plugins.core.hosts import BaseHost
 
         # Mock dependencies
-        mock_logger = Mock()
-        mock_config = Mock()
-        mock_state_storage = Mock()
+        mock_logger = SimpleInMemoryLogger()
+        mock_config = MockConfiguration()
+        mock_state_storage = MockStateStorage()
 
         # Create BaseHost
         host = BaseHost(
@@ -164,7 +167,7 @@ class TestBaseHostConfigurationAccess:
         # Test configuration access
         assert host.configuration is mock_config
 
-    def test_base_host_configuration_access_patterns(self):
+    def test_base_host_configuration_access_patterns(self) -> None:
         """Test common configuration access patterns through BaseHost."""
         from paise2.plugins.core.hosts import BaseHost
 
@@ -173,11 +176,11 @@ class TestBaseHostConfigurationAccess:
             "plugin": {"setting1": "value1", "setting2": 42},
             "global": {"debug": True},
         }
-        configuration = MergedConfiguration(config_data)
+        configuration = ConcreteConfiguration(config_data)
 
         # Mock other dependencies
-        mock_logger = Mock()
-        mock_state_storage = Mock()
+        mock_logger = SimpleInMemoryLogger()
+        mock_state_storage = MockStateStorage()
 
         # Create BaseHost
         host = BaseHost(

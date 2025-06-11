@@ -5,24 +5,13 @@ import tempfile
 
 from paise2.plugins.core.registry import PluginManager
 from paise2.state.providers import FileStateStorageProvider, MemoryStateStorageProvider
-
-
-# Simple mock configuration implementation for testing
-class MockConfiguration:
-    def __init__(self, data: dict):
-        self.data = data
-
-    def get(self, key: str, default=None):
-        return self.data.get(key, default)
-
-    def get_section(self, section: str):
-        return self.data.get(section, {})
+from tests.fixtures import MockConfiguration
 
 
 class TestStateStorageProviderRegistration:
     """Test state storage provider registration with plugin system."""
 
-    def test_memory_state_storage_provider_registration(self):
+    def test_memory_state_storage_provider_registration(self) -> None:
         """Test memory state storage provider can be registered."""
         plugin_manager = PluginManager()
 
@@ -36,7 +25,7 @@ class TestStateStorageProviderRegistration:
         assert len(registered_providers) == 1
         assert isinstance(registered_providers[0], MemoryStateStorageProvider)
 
-    def test_file_state_storage_provider_registration(self):
+    def test_file_state_storage_provider_registration(self) -> None:
         """Test file state storage provider can be registered."""
         plugin_manager = PluginManager()
 
@@ -50,7 +39,7 @@ class TestStateStorageProviderRegistration:
         assert len(registered_providers) == 1
         assert isinstance(registered_providers[0], FileStateStorageProvider)
 
-    def test_multiple_state_storage_providers_registration(self):
+    def test_multiple_state_storage_providers_registration(self) -> None:
         """Test multiple state storage providers can be registered."""
         plugin_manager = PluginManager()
 
@@ -71,7 +60,7 @@ class TestStateStorageProviderRegistration:
         assert MemoryStateStorageProvider in provider_types
         assert FileStateStorageProvider in provider_types
 
-    def test_state_storage_provider_protocol_validation(self):
+    def test_state_storage_provider_protocol_validation(self) -> None:
         """Test that provider registration validates StateStorageProvider protocol."""
         plugin_manager = PluginManager()
 
@@ -79,18 +68,20 @@ class TestStateStorageProviderRegistration:
         valid_provider = MemoryStateStorageProvider()
         assert plugin_manager.register_state_storage_provider(valid_provider) is True
 
-        # Invalid provider should fail
+        # Invalid provider should fail - doesn't fully implement the protocol
         class InvalidProvider:
             pass
 
         invalid_provider = InvalidProvider()
-        assert plugin_manager.register_state_storage_provider(invalid_provider) is False
+        result = plugin_manager.register_state_storage_provider(invalid_provider)  # type: ignore[arg-type]
+        assert result is False
 
-    def test_none_state_storage_provider_registration(self):
+    def test_none_state_storage_provider_registration(self) -> None:
         """Test that registering None as provider fails gracefully."""
         plugin_manager = PluginManager()
 
-        result = plugin_manager.register_state_storage_provider(None)
+        # We expect None to fail, but mypy needs help understanding this is intentional
+        result = plugin_manager.register_state_storage_provider(None)  # type: ignore[arg-type]
 
         assert result is False
 
@@ -102,7 +93,7 @@ class TestStateStorageProviderRegistration:
 class TestStateStorageProviderDiscovery:
     """Test state storage provider plugin discovery."""
 
-    def test_profile_based_state_storage_providers_discoverable(self):
+    def test_profile_based_state_storage_providers_discoverable(self) -> None:
         """Test that state storage providers are discoverable via
         profile-based loading."""
         # Test that profile-based plugins are discoverable
@@ -114,7 +105,7 @@ class TestStateStorageProviderDiscovery:
         # Should find plugins in test profile
         assert isinstance(discovered, list)
 
-    def test_state_storage_provider_creation_from_configuration(self):
+    def test_state_storage_provider_creation_from_configuration(self) -> None:
         """Test that providers can create storage instances from configuration."""
         # Test memory provider
         memory_provider = MemoryStateStorageProvider()
@@ -139,7 +130,7 @@ class TestStateStorageProviderDiscovery:
 class TestStateStorageProviderIntegrationWithConfiguration:
     """Test state storage provider integration with configuration system."""
 
-    def test_file_provider_uses_configuration_path(self):
+    def test_file_provider_uses_configuration_path(self) -> None:
         """Test that file provider uses path from configuration."""
         provider = FileStateStorageProvider()
 
@@ -155,7 +146,7 @@ class TestStateStorageProviderIntegrationWithConfiguration:
 
             assert result == "test_value"
 
-    def test_file_provider_uses_default_path_when_not_configured(self):
+    def test_file_provider_uses_default_path_when_not_configured(self) -> None:
         """Test that file provider uses default path when not configured."""
         provider = FileStateStorageProvider()
 
@@ -168,7 +159,7 @@ class TestStateStorageProviderIntegrationWithConfiguration:
 
         assert result == "test_value"
 
-    def test_memory_provider_ignores_configuration(self):
+    def test_memory_provider_ignores_configuration(self) -> None:
         """Test that memory provider works regardless of configuration."""
         provider = MemoryStateStorageProvider()
 

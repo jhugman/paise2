@@ -7,43 +7,24 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from typing import Any
 
 import pytest
 import yaml
 
-from paise2.config.models import Configuration, ConfigurationDict
+from paise2.config.diffing import ConcreteConfiguration
+from paise2.config.models import Configuration
 
 
 class TestConfiguration(unittest.TestCase):
     """Test configuration protocol and implementation."""
 
-    def test_configuration_protocol_compliance(self):
+    def test_configuration_protocol_compliance(self) -> None:
         """Test that Configuration protocol can be implemented."""
-
-        class MockConfiguration:
-            def __init__(self, data: ConfigurationDict):
-                self._data = data
-
-            def get(self, key: str, default: Any = None) -> Any:
-                # Simple dotted path support
-                keys = key.split(".")
-                value = self._data
-                for k in keys:
-                    if isinstance(value, dict) and k in value:
-                        value = value[k]
-                    else:
-                        return default
-                return value
-
-            def get_section(self, section: str) -> ConfigurationDict:
-                return self._data.get(section, {})
-
         config_data = {
             "plugin1": {"key1": "value1"},
             "plugin2": {"nested": {"key2": "value2"}},
         }
-        config = MockConfiguration(config_data)
+        config = ConcreteConfiguration(config_data)
 
         # Test protocol compliance
         assert isinstance(config, Configuration)  # Should not raise
@@ -56,7 +37,7 @@ class TestConfiguration(unittest.TestCase):
 class TestFileConfigurationProvider(unittest.TestCase):
     """Test file-based configuration provider."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         self.temp_dir = tempfile.mkdtemp()
         self.config_file = Path(self.temp_dir) / "test_config.yaml"
@@ -69,20 +50,20 @@ class TestFileConfigurationProvider(unittest.TestCase):
         with self.config_file.open("w") as f:
             yaml.dump(self.config_data, f)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         """Clean up test fixtures."""
         if self.config_file.exists():
             self.config_file.unlink()
         Path(self.temp_dir).rmdir()
 
-    def test_file_configuration_provider_creation(self):
+    def test_file_configuration_provider_creation(self) -> None:
         """Test creating FileConfigurationProvider with file path."""
         from paise2.config.providers import FileConfigurationProvider
 
         provider = FileConfigurationProvider(str(self.config_file))
         assert provider.get_configuration_id() == "test_config.yaml"
 
-    def test_file_configuration_provider_load_yaml(self):
+    def test_file_configuration_provider_load_yaml(self) -> None:
         """Test loading YAML configuration from file."""
         from paise2.config.providers import FileConfigurationProvider
 
@@ -93,7 +74,7 @@ class TestFileConfigurationProvider(unittest.TestCase):
         loaded_data = yaml.safe_load(config_yaml)
         assert loaded_data == self.config_data
 
-    def test_file_configuration_provider_relative_path(self):
+    def test_file_configuration_provider_relative_path(self) -> None:
         """Test handling relative paths with plugin modules."""
         import paise2.config.models as test_module
         from paise2.config.providers import FileConfigurationProvider
@@ -116,7 +97,7 @@ class TestFileConfigurationProvider(unittest.TestCase):
             if rel_config_file.exists():
                 rel_config_file.unlink()
 
-    def test_file_configuration_provider_missing_file(self):
+    def test_file_configuration_provider_missing_file(self) -> None:
         """Test handling missing configuration files."""
         from paise2.config.providers import FileConfigurationProvider
 
@@ -130,7 +111,7 @@ class TestFileConfigurationProvider(unittest.TestCase):
 class TestConfigurationMerging(unittest.TestCase):
     """Test configuration merging logic."""
 
-    def test_merge_scalar_values_last_wins(self):
+    def test_merge_scalar_values_last_wins(self) -> None:
         """Test that later plugin scalar values override earlier ones."""
         from paise2.config.manager import ConfigurationManager
 
@@ -142,7 +123,7 @@ class TestConfigurationMerging(unittest.TestCase):
 
         assert merged["plugin1"]["setting"] == "value2"
 
-    def test_merge_list_concatenation(self):
+    def test_merge_list_concatenation(self) -> None:
         """Test that lists are concatenated during merging."""
         from paise2.config.manager import ConfigurationManager
 
@@ -154,7 +135,7 @@ class TestConfigurationMerging(unittest.TestCase):
 
         assert merged["plugin1"]["items"] == ["a", "b", "c", "d"]
 
-    def test_merge_dict_recursive(self):
+    def test_merge_dict_recursive(self) -> None:
         """Test recursive dictionary merging."""
         from paise2.config.manager import ConfigurationManager
 
@@ -167,7 +148,7 @@ class TestConfigurationMerging(unittest.TestCase):
         expected = {"plugin1": {"nested": {"key1": "value1", "key2": "value2"}}}
         assert merged == expected
 
-    def test_user_config_overrides_plugin_config(self):
+    def test_user_config_overrides_plugin_config(self) -> None:
         """Test that user configuration completely overrides plugin defaults."""
         from paise2.config.manager import ConfigurationManager
 
@@ -182,7 +163,7 @@ class TestConfigurationMerging(unittest.TestCase):
         # But non-overridden keys should remain
         assert merged["plugin1"]["list"] == ["a", "b"]
 
-    def test_empty_configuration_handling(self):
+    def test_empty_configuration_handling(self) -> None:
         """Test handling of empty or None configurations."""
         from paise2.config.manager import ConfigurationManager
 
@@ -199,13 +180,13 @@ class TestConfigurationMerging(unittest.TestCase):
 class TestConfigurationManager(unittest.TestCase):
     """Test the configuration manager implementation."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test environment."""
         self.temp_dir = tempfile.mkdtemp()
         self.original_env = os.environ.get("PAISE_CONFIG_DIR")
         os.environ["PAISE_CONFIG_DIR"] = self.temp_dir
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         """Clean up test environment."""
         if self.original_env:
             os.environ["PAISE_CONFIG_DIR"] = self.original_env
@@ -217,7 +198,7 @@ class TestConfigurationManager(unittest.TestCase):
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_paise_config_dir_environment_variable(self):
+    def test_paise_config_dir_environment_variable(self) -> None:
         """Test that PAISE_CONFIG_DIR environment variable is respected."""
         from paise2.config.manager import ConfigurationManager
 
@@ -233,7 +214,7 @@ class TestConfigurationManager(unittest.TestCase):
         # Implementation details will depend on actual ConfigurationManager interface
         assert manager.get_config_dir() == self.temp_dir
 
-    def test_configuration_error_handling(self):
+    def test_configuration_error_handling(self) -> None:
         """Test proper error handling for invalid YAML."""
         from paise2.config.manager import ConfigurationManager
 

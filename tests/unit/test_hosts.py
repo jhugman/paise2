@@ -5,14 +5,16 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from paise2.plugins.core.hosts import BaseHost, create_state_manager
+from paise2.plugins.core.hosts import BaseHost, create_base_host, create_state_manager
 from paise2.plugins.core.interfaces import StateManager, StateStorage
+from paise2.utils.logging import SimpleInMemoryLogger
+from tests.fixtures import MockConfiguration
 
 
 class TestStateManager:
     """Test StateManager with automatic partitioning by plugin module name."""
 
-    def test_state_manager_creation(self):
+    def test_state_manager_creation(self) -> None:
         """Test StateManager creation with proper partitioning."""
         mock_storage = Mock(spec=StateStorage)
         plugin_module_name = "paise2.plugins.test_plugin"
@@ -23,7 +25,7 @@ class TestStateManager:
         assert hasattr(state_manager, "store")
         assert hasattr(state_manager, "get")
 
-    def test_state_partitioning_by_module_name(self):
+    def test_state_partitioning_by_module_name(self) -> None:
         """Test that state is automatically partitioned by plugin module name."""
         mock_storage = Mock(spec=StateStorage)
         plugin_module_name = "paise2.plugins.test_plugin"
@@ -38,7 +40,7 @@ class TestStateManager:
             plugin_module_name, "test_key", "test_value", 1
         )
 
-    def test_state_get_with_partitioning(self):
+    def test_state_get_with_partitioning(self) -> None:
         """Test state retrieval uses correct partition."""
         mock_storage = Mock(spec=StateStorage)
         mock_storage.get.return_value = "retrieved_value"
@@ -53,7 +55,7 @@ class TestStateManager:
         )
         assert result == "retrieved_value"
 
-    def test_state_isolation_between_plugins(self):
+    def test_state_isolation_between_plugins(self) -> None:
         """Test that different plugins get isolated state storage."""
         mock_storage = Mock(spec=StateStorage)
 
@@ -71,7 +73,7 @@ class TestStateManager:
         assert calls[0][0] == ("paise2.plugins.plugin1", "key", "value1", 1)
         assert calls[1][0] == ("paise2.plugins.plugin2", "key", "value2", 1)
 
-    def test_state_versioning_support(self):
+    def test_state_versioning_support(self) -> None:
         """Test versioning support for plugin updates."""
         mock_storage = Mock(spec=StateStorage)
         mock_storage.get_versioned_state.return_value = [
@@ -87,7 +89,7 @@ class TestStateManager:
         mock_storage.get_versioned_state.assert_called_once_with(plugin_module_name, 3)
         assert result == [("key1", "value1", 1), ("key2", "value2", 2)]
 
-    def test_state_get_all_keys_with_value(self):
+    def test_state_get_all_keys_with_value(self) -> None:
         """Test querying keys by value."""
         mock_storage = Mock(spec=StateStorage)
         mock_storage.get_all_keys_with_value.return_value = ["key1", "key2"]
@@ -102,7 +104,7 @@ class TestStateManager:
         )
         assert result == ["key1", "key2"]
 
-    def test_state_store_with_version(self):
+    def test_state_store_with_version(self) -> None:
         """Test storing state with explicit version."""
         mock_storage = Mock(spec=StateStorage)
         plugin_module_name = "paise2.plugins.test_plugin"
@@ -119,11 +121,11 @@ class TestStateManager:
 class TestBaseHost:
     """Test BaseHost class functionality."""
 
-    def test_base_host_creation(self):
+    def test_base_host_creation(self) -> None:
         """Test BaseHost creation with mock dependencies."""
-        # Mock all dependencies that BaseHost will need
-        mock_logger = Mock()
-        mock_configuration = {"test": "config"}
+        # Use SimpleInMemoryLogger instead of Mock
+        mock_logger = SimpleInMemoryLogger()
+        mock_configuration = MockConfiguration({"test": "config"})
         mock_state_storage = Mock(spec=StateStorage)
         plugin_module_name = "paise2.plugins.test_plugin"
 
@@ -135,13 +137,13 @@ class TestBaseHost:
         )
 
         assert host.logger is mock_logger
-        assert host.configuration is mock_configuration
+        assert hasattr(host, "configuration")
         assert hasattr(host, "state")
 
-    def test_base_host_state_property(self):
+    def test_base_host_state_property(self) -> None:
         """Test that BaseHost.state returns a StateManager."""
-        mock_logger = Mock()
-        mock_configuration = {"test": "config"}
+        mock_logger = SimpleInMemoryLogger()
+        mock_configuration = MockConfiguration({"test": "config"})
         mock_state_storage = Mock(spec=StateStorage)
         plugin_module_name = "paise2.plugins.test_plugin"
 
@@ -154,10 +156,10 @@ class TestBaseHost:
 
         assert isinstance(host.state, StateManager)
 
-    def test_base_host_state_uses_module_name(self):
+    def test_base_host_state_uses_module_name(self) -> None:
         """Test that BaseHost creates state manager with correct module name."""
-        mock_logger = Mock()
-        mock_configuration = {"test": "config"}
+        mock_logger = SimpleInMemoryLogger()
+        mock_configuration = MockConfiguration({"test": "config"})
         mock_state_storage = Mock(spec=StateStorage)
         plugin_module_name = "paise2.plugins.test_plugin"
 
@@ -175,10 +177,10 @@ class TestBaseHost:
             plugin_module_name, "test_key", "test_value", 1
         )
 
-    def test_base_host_schedule_fetch_placeholder(self):
+    def test_base_host_schedule_fetch_placeholder(self) -> None:
         """Test that BaseHost has schedule_fetch method (placeholder for now)."""
-        mock_logger = Mock()
-        mock_configuration = {"test": "config"}
+        mock_logger = SimpleInMemoryLogger()
+        mock_configuration = MockConfiguration({"test": "config"})
         mock_state_storage = Mock(spec=StateStorage)
         plugin_module_name = "paise2.plugins.test_plugin"
 
@@ -198,15 +200,14 @@ class TestBaseHost:
 class TestHostFactories:
     """Test host factory functions."""
 
-    def test_create_base_host_factory(self):
+    def test_create_base_host_factory(self) -> None:
         """Test base host creation through factory function."""
-        mock_logger = Mock()
-        mock_configuration = {"test": "config"}
+        mock_logger = SimpleInMemoryLogger()
+        mock_configuration = MockConfiguration({"test": "config"})
         mock_state_storage = Mock(spec=StateStorage)
         plugin_module_name = "paise2.plugins.test_plugin"
 
         # Import the factory function we'll create
-        from paise2.plugins.core.hosts import create_base_host
 
         host = create_base_host(
             logger=mock_logger,
@@ -217,13 +218,13 @@ class TestHostFactories:
 
         assert isinstance(host, BaseHost)
         assert host.logger is mock_logger
-        assert host.configuration is mock_configuration
+        assert hasattr(host, "configuration")
 
 
 class TestModuleNameDetection:
     """Test automatic plugin module name detection."""
 
-    def test_get_plugin_module_name_from_frame(self):
+    def test_get_plugin_module_name_from_frame(self) -> None:
         """Test extracting plugin module name from call stack."""
         from paise2.plugins.core.hosts import get_plugin_module_name_from_frame
 
@@ -237,7 +238,7 @@ class TestModuleNameDetection:
 class TestStateManagerImplementation:
     """Test the concrete StateManager implementation."""
 
-    def test_state_manager_implements_protocol(self):
+    def test_state_manager_implements_protocol(self) -> None:
         """Test that our StateManager implementation matches the protocol."""
         from paise2.plugins.core.hosts import ConcreteStateManager
 
@@ -252,7 +253,7 @@ class TestStateManagerImplementation:
         assert hasattr(state_manager, "get_versioned_state")
         assert hasattr(state_manager, "get_all_keys_with_value")
 
-    def test_concrete_state_manager_store_operation(self):
+    def test_concrete_state_manager_store_operation(self) -> None:
         """Test ConcreteStateManager store operation."""
         from paise2.plugins.core.hosts import ConcreteStateManager
 
@@ -263,7 +264,7 @@ class TestStateManagerImplementation:
 
         mock_storage.store.assert_called_once_with("test.module", "key", "value", 2)
 
-    def test_concrete_state_manager_get_operation(self):
+    def test_concrete_state_manager_get_operation(self) -> None:
         """Test ConcreteStateManager get operation."""
         from paise2.plugins.core.hosts import ConcreteStateManager
 

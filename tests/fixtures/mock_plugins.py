@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 import pluggy
 
 from paise2.models import Metadata
+from paise2.plugins.core.interfaces import Job
 
 if TYPE_CHECKING:
     from paise2.plugins.core.interfaces import (
@@ -46,7 +48,7 @@ class MockContentExtractor:
 
     def can_extract(self, url: str, mime_type: str | None = None) -> bool:
         """Can extract test content from any URL."""
-        return url.startswith("test://") or (mime_type and "test" in mime_type)
+        return url.startswith("test://") or bool(mime_type and "test" in mime_type)
 
     def preferred_mime_types(self) -> list[str]:
         """Returns preferred MIME types."""
@@ -159,30 +161,32 @@ class MockDataStorageProvider:
 class MockDataStorage:
     """Test data storage implementation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._items: dict[str, tuple[str, Metadata]] = {}
         self._next_id = 1
 
-    async def add_item(self, host, content: str, metadata: Metadata) -> str:
+    async def add_item(self, host: Any, content: str, metadata: Metadata) -> str:
         """Add an item to test storage."""
         item_id = f"test_item_{self._next_id}"
         self._next_id += 1
         self._items[item_id] = (content, metadata)
         return item_id
 
-    async def update_item(self, host, item_id: str, content: str) -> None:
+    async def update_item(self, host: Any, item_id: str, content: str) -> None:
         """Update an item in test storage."""
         if item_id in self._items:
             _, metadata = self._items[item_id]
             self._items[item_id] = (content, metadata)
 
-    async def update_metadata(self, host, item_id: str, metadata: Metadata) -> None:
+    async def update_metadata(
+        self, host: Any, item_id: str, metadata: Metadata
+    ) -> None:
         """Update metadata for an item."""
         if item_id in self._items:
             content, _ = self._items[item_id]
             self._items[item_id] = (content, metadata)
 
-    async def find_item_id(self, host, metadata: Metadata) -> str | None:
+    async def find_item_id(self, host: Any, metadata: Metadata) -> str | None:
         """Find item ID by metadata."""
         for item_id, (_, stored_metadata) in self._items.items():
             if stored_metadata.source_url == metadata.source_url:
@@ -197,14 +201,16 @@ class MockDataStorage:
         msg = f"Item not found: {item_id}"
         raise KeyError(msg)
 
-    async def remove_item(self, host, item_id: str) -> str | None:
+    async def remove_item(self, host: Any, item_id: str) -> str | None:
         """Remove an item from storage."""
         if item_id in self._items:
             del self._items[item_id]
             return f"cache_{item_id}"  # Return cache ID for cleanup
         return None
 
-    async def remove_items_by_metadata(self, host, metadata: Metadata) -> list[str]:
+    async def remove_items_by_metadata(
+        self, host: Any, metadata: Metadata
+    ) -> list[str]:
         """Remove items by metadata criteria."""
         to_remove = []
         cache_ids = []
@@ -218,7 +224,7 @@ class MockDataStorage:
 
         return cache_ids
 
-    async def remove_items_by_url(self, host, url: str) -> list[str]:
+    async def remove_items_by_url(self, host: Any, url: str) -> list[str]:
         """Remove items by URL."""
         metadata = Metadata(source_url=url)
         return await self.remove_items_by_metadata(host, metadata)
@@ -236,8 +242,8 @@ class MockJobQueueProvider:
 class MockJobQueue:
     """Test job queue implementation (synchronous for testing)."""
 
-    def __init__(self):
-        self._jobs: list[dict] = []
+    def __init__(self) -> None:
+        self._jobs: list[Job] = []
         self._next_id = 1
 
     async def enqueue(self, job_type: str, job_data: dict, priority: int = 0) -> str:
@@ -245,45 +251,48 @@ class MockJobQueue:
         job_id = f"test_job_{self._next_id}"
         self._next_id += 1
 
-        job = {
-            "job_id": job_id,
-            "job_type": job_type,
-            "job_data": job_data,
-            "priority": priority,
-            "status": "pending",
-        }
+        job = Job(
+            job_id=job_id,
+            job_type=job_type,
+            job_data=job_data,
+            priority=priority,
+            created_at=datetime.now(),
+        )
         self._jobs.append(job)
         return job_id
 
-    async def dequeue(self, worker_id: str) -> dict | None:
+    async def dequeue(self, worker_id: str) -> Job | None:
         """Dequeue a job for processing."""
         for job in self._jobs:
-            if job["status"] == "pending":
-                job["status"] = "processing"
-                job["worker_id"] = worker_id
-                return job
+            if not hasattr(job, "worker_id") or job.worker_id is None:
+                # Create a new Job with worker_id since Job is frozen
+                updated_job = Job(
+                    job_id=job.job_id,
+                    job_type=job.job_type,
+                    job_data=job.job_data,
+                    priority=job.priority,
+                    created_at=job.created_at,
+                    worker_id=worker_id,
+                )
+                # Replace in the list
+                job_index = self._jobs.index(job)
+                self._jobs[job_index] = updated_job
+                return updated_job
         return None
 
     async def complete(self, job_id: str, result: dict | None = None) -> None:
         """Mark a job as completed."""
-        for job in self._jobs:
-            if job["job_id"] == job_id:
-                job["status"] = "completed"
-                if result:
-                    job["result"] = result
-                break
+        # Remove completed jobs from the list for simplicity in tests
+        self._jobs = [job for job in self._jobs if job.job_id != job_id]
 
     async def fail(self, job_id: str, error: str, retry: bool = True) -> None:
-        """Mark a job as failed."""
-        for job in self._jobs:
-            if job["job_id"] == job_id:
-                job["status"] = "failed" if not retry else "pending"
-                job["error"] = error
-                break
+        """Handle job failure."""
+        # For testing, just remove failed jobs
+        self._jobs = [job for job in self._jobs if job.job_id != job_id]
 
-    async def get_incomplete_jobs(self) -> list[dict]:
+    async def get_incomplete_jobs(self) -> list[Job]:
         """Get all incomplete jobs."""
-        return [job for job in self._jobs if job["status"] in ("pending", "processing")]
+        return [job for job in self._jobs if job.worker_id is None]
 
 
 # Test State Storage Provider
@@ -298,16 +307,16 @@ class MockStateStorageProvider:
 class MockStateStorage:
     """Test state storage implementation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._state: dict[str, dict[str, tuple]] = {}
 
-    def store(self, partition_key: str, key: str, value, version: int = 1) -> None:
+    def store(self, partition_key: str, key: str, value: Any, version: int = 1) -> None:
         """Store state with partitioning."""
         if partition_key not in self._state:
             self._state[partition_key] = {}
         self._state[partition_key][key] = (value, version)
 
-    def get(self, partition_key: str, key: str, default=None):
+    def get(self, partition_key: str, key: str, default: Any = None) -> Any:
         """Get state value."""
         if partition_key in self._state and key in self._state[partition_key]:
             value, _ = self._state[partition_key][key]
@@ -316,7 +325,7 @@ class MockStateStorage:
 
     def get_versioned_state(
         self, partition_key: str, older_than_version: int
-    ) -> list[tuple[str, any, int]]:
+    ) -> list[tuple[str, Any, int]]:
         """Get state entries older than specified version."""
         result = []
         if partition_key in self._state:
@@ -325,7 +334,7 @@ class MockStateStorage:
                     result.append((key, value, version))
         return result
 
-    def get_all_keys_with_value(self, partition_key: str, value) -> list[str]:
+    def get_all_keys_with_value(self, partition_key: str, value: Any) -> list[str]:
         """Get all keys that have the specified value."""
         result = []
         if partition_key in self._state:
@@ -333,6 +342,22 @@ class MockStateStorage:
                 if stored_value == value:
                     result.append(key)
         return result
+
+
+class MockStateManager:
+    def store(self, key: str, value: Any, version: int = 1) -> None:
+        pass
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return default
+
+    def get_versioned_state(
+        self, older_than_version: int
+    ) -> list[tuple[str, Any, int]]:
+        return []
+
+    def get_all_keys_with_value(self, value: Any) -> list[str]:
+        return []
 
 
 # Test Cache Provider
@@ -347,49 +372,49 @@ class MockCacheProvider:
 class MockCacheManager:
     """Test cache manager implementation."""
 
-    def __init__(self):
-        self._cache: dict[str, dict[str, bytes | str]] = {}
+    def __init__(self) -> None:
+        self._cache: dict[str, bytes | str] = {}
         self._next_id = 1
+
+    def _prefix(self, partition_key: str) -> str:
+        return f"cache_{partition_key}_"
 
     async def save(self, partition_key: str, content: bytes | str) -> str:
         """Save content to cache."""
-        if partition_key not in self._cache:
-            self._cache[partition_key] = {}
-
-        cache_id = f"cache_{self._next_id}"
+        prefix = self._prefix(partition_key)
+        cache_id = f"{prefix}{self._next_id}"
         self._next_id += 1
-        self._cache[partition_key][cache_id] = content
+        self._cache[cache_id] = content
         return cache_id
 
-    async def get(self, partition_key: str, cache_id: str) -> bytes | str:
+    async def get(self, cache_id: str) -> bytes | str:
         """Get content from cache."""
-        if partition_key in self._cache and cache_id in self._cache[partition_key]:
-            return self._cache[partition_key][cache_id]
-        msg = f"Cache entry not found: {partition_key}/{cache_id}"
+        if cache_id in self._cache:
+            return self._cache[cache_id]
+        msg = f"Cache entry not found: {cache_id}"
         raise KeyError(msg)
 
-    async def remove(self, partition_key: str, cache_id: str) -> bool:
+    async def remove(self, cache_id: str) -> bool:
         """Remove content from cache."""
-        if partition_key in self._cache and cache_id in self._cache[partition_key]:
-            del self._cache[partition_key][cache_id]
+        if cache_id in self._cache:
+            del self._cache[cache_id]
             return True
         return False
 
-    async def remove_all(self, partition_key: str, cache_ids: list[str]) -> list[str]:
+    async def remove_all(self, cache_ids: list[str]) -> list[str]:
         """Remove multiple cache entries."""
-        removed = []
-        if partition_key in self._cache:
-            for cache_id in cache_ids:
-                if cache_id in self._cache[partition_key]:
-                    del self._cache[partition_key][cache_id]
-                    removed.append(cache_id)
-        return removed
+        unremoved = []
+        for cache_id in cache_ids:
+            if cache_id in self._cache:
+                del self._cache[cache_id]
+            else:
+                unremoved.append(cache_id)
+        return unremoved
 
     async def get_all(self, partition_key: str) -> list[str]:
         """Get all cache IDs for a partition."""
-        if partition_key in self._cache:
-            return list(self._cache[partition_key].keys())
-        return []
+        prefix = self._prefix(partition_key)
+        return [k for k in self._cache if k.startswith(prefix)]
 
 
 # Plugin registration functions using @hookimpl
@@ -397,54 +422,54 @@ hookimpl = pluggy.HookimplMarker("paise2")
 
 
 @hookimpl
-def register_configuration_provider(register):
+def register_configuration_provider(register: Any) -> None:
     """Register mock configuration provider."""
     register(MockConfigurationProvider())
 
 
 @hookimpl
-def register_content_extractor(register):
+def register_content_extractor(register: Any) -> None:
     """Register mock content extractor."""
     register(MockContentExtractor())
 
 
 @hookimpl
-def register_content_source(register):
+def register_content_source(register: Any) -> None:
     """Register mock content source."""
     register(MockContentSource())
 
 
 @hookimpl
-def register_content_fetcher(register):
+def register_content_fetcher(register: Any) -> None:
     """Register mock content fetcher."""
     register(MockContentFetcher())
 
 
 @hookimpl
-def register_lifecycle_action(register):
+def register_lifecycle_action(register: Any) -> None:
     """Register mock lifecycle action."""
     register(MockLifecycleAction())
 
 
 @hookimpl
-def register_data_storage_provider(register):
+def register_data_storage_provider(register: Any) -> None:
     """Register mock data storage provider."""
     register(MockDataStorageProvider())
 
 
 @hookimpl
-def register_job_queue_provider(register):
+def register_job_queue_provider(register: Any) -> None:
     """Register mock job queue provider."""
     register(MockJobQueueProvider())
 
 
 @hookimpl
-def register_state_storage_provider(register):
+def register_state_storage_provider(register: Any) -> None:
     """Register mock state storage provider."""
     register(MockStateStorageProvider())
 
 
 @hookimpl
-def register_cache_provider(register):
+def register_cache_provider(register: Any) -> None:
     """Register mock cache provider."""
     register(MockCacheProvider())

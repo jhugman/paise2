@@ -5,67 +5,14 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
-from .models import Configuration, ConfigurationDict
+if TYPE_CHECKING:
+    from .models import ConfigurationDict
 
-__all__ = ["ConfigurationManager", "MergedConfiguration"]
-
-
-class MergedConfiguration(Configuration):
-    """
-    Implementation of Configuration protocol that provides merged configuration access.
-
-    Supports dotted path access and section-based retrieval from merged
-    configuration data.
-    """
-
-    def __init__(self, config_data: ConfigurationDict):
-        """
-        Initialize with merged configuration data.
-
-        Args:
-            config_data: Merged configuration dictionary
-        """
-        self._config_data = config_data
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """
-        Get a configuration value by key with optional default.
-
-        Supports dotted path access like 'plugin.section.key'.
-
-        Args:
-            key: Configuration key (supports dotted paths)
-            default: Default value if key not found
-
-        Returns:
-            Configuration value or default
-        """
-        # Handle dotted path access
-        keys = key.split(".")
-        current = self._config_data
-
-        for k in keys:
-            if not isinstance(current, dict) or k not in current:
-                return default
-            current = current[k]
-
-        return current
-
-    def get_section(self, section: str) -> ConfigurationDict:
-        """
-        Get an entire configuration section.
-
-        Args:
-            section: Section name
-
-        Returns:
-            Dictionary containing section configuration
-        """
-        return cast("ConfigurationDict", self._config_data.get(section, {}))
+__all__ = ["ConfigurationManager"]
 
 
 class ConfigurationManager:

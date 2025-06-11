@@ -3,12 +3,16 @@
 
 from __future__ import annotations
 
+import logging
 import pickle
 import sqlite3
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
+
+# Set up module logger
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from paise2.config.models import Configuration
@@ -290,12 +294,14 @@ class SQLiteJobQueueProvider:
     ) -> JobQueue:
         """Create a SQLite-based job queue."""
         _ = job_executor  # SQLite queues use external workers, executor ignored
+
         db_path = configuration.get(
             "job_queue.sqlite_path", "~/.local/share/paise2/jobs.db"
         )
-        # Expand user path
-        db_path = Path(db_path).expanduser()
-        return SQLiteJobQueue(db_path)
+
+        # Default path only if nothing specified in configuration
+        default_path = Path(db_path).expanduser().resolve()
+        return SQLiteJobQueue(default_path)
 
 
 class SQLiteJobQueue:
@@ -322,6 +328,7 @@ class SQLiteJobQueue:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         with sqlite3.connect(self.db_path) as conn:
+            # (Re)create the table with the correct schema
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS jobs (
                     job_id TEXT PRIMARY KEY,
@@ -337,6 +344,7 @@ class SQLiteJobQueue:
                     result BLOB
                 )
             """)
+            conn.commit()
 
             # Create indices for performance
             conn.execute("""

@@ -23,7 +23,8 @@
 			"args": [
 				"run",
 				"mypy",
-				"src/"
+				"src/",
+				"tests/"
 			],
 			"group": "build",
 			"problemMatcher": [
@@ -70,7 +71,7 @@
 				"--",
 				"bash",
 				"-c",
-				"uv run ruff check src/ tests/ && uv run ruff format --check src/ tests/ && uv run mypy src/ && uv run pytest tests/ -v"
+				"uv run ruff check src/ tests/ && uv run ruff format src/ tests/ && uv run mypy src/ tests/ && uv run pytest tests/ -v"
 			],
 			"group": "build",
 			"problemMatcher": [

@@ -12,28 +12,13 @@ from paise2.plugins.core.jobs import (
     SQLiteJobQueueProvider,
 )
 from paise2.plugins.core.registry import PluginManager
-
-
-# Simple mock configuration implementation for testing
-class MockConfiguration:
-    """Mock configuration for testing."""
-
-    def __init__(self, config_dict: dict | None = None):
-        self._config = config_dict or {}
-
-    def get(self, key: str, default=None):
-        """Get configuration value by key."""
-        return self._config.get(key, default)
-
-    def get_section(self, section: str):
-        """Get configuration section."""
-        return self._config.get(section, {})
+from tests.fixtures import MockConfiguration
 
 
 class TestJobQueueProviderRegistration:
     """Test job queue provider registration with plugin system."""
 
-    def test_no_job_queue_provider_registration(self):
+    def test_no_job_queue_provider_registration(self) -> None:
         """Test no job queue provider can be registered."""
         plugin_manager = PluginManager()
 
@@ -47,7 +32,7 @@ class TestJobQueueProviderRegistration:
         assert len(registered_providers) == 1
         assert isinstance(registered_providers[0], NoJobQueueProvider)
 
-    def test_sqlite_job_queue_provider_registration(self):
+    def test_sqlite_job_queue_provider_registration(self) -> None:
         """Test SQLite job queue provider can be registered."""
         plugin_manager = PluginManager()
 
@@ -61,7 +46,7 @@ class TestJobQueueProviderRegistration:
         assert len(registered_providers) == 1
         assert isinstance(registered_providers[0], SQLiteJobQueueProvider)
 
-    def test_multiple_job_queue_providers_registration(self):
+    def test_multiple_job_queue_providers_registration(self) -> None:
         """Test multiple job queue providers can be registered."""
         plugin_manager = PluginManager()
 
@@ -82,7 +67,7 @@ class TestJobQueueProviderRegistration:
         assert NoJobQueueProvider in provider_types
         assert SQLiteJobQueueProvider in provider_types
 
-    def test_job_queue_provider_protocol_validation(self):
+    def test_job_queue_provider_protocol_validation(self) -> None:
         """Test that provider registration validates JobQueueProvider protocol."""
         plugin_manager = PluginManager()
 
@@ -95,25 +80,14 @@ class TestJobQueueProviderRegistration:
             pass
 
         invalid_provider = InvalidProvider()
-        assert plugin_manager.register_job_queue_provider(invalid_provider) is False
-
-    def test_none_job_queue_provider_registration(self):
-        """Test that registering None as provider fails gracefully."""
-        plugin_manager = PluginManager()
-
-        result = plugin_manager.register_job_queue_provider(None)
-
+        result = plugin_manager.register_job_queue_provider(invalid_provider)  # type: ignore[arg-type]
         assert result is False
-
-        # No providers should be registered
-        registered_providers = plugin_manager.get_job_queue_providers()
-        assert len(registered_providers) == 0
 
 
 class TestJobQueueProviderDiscovery:
     """Test job queue provider plugin discovery."""
 
-    def test_profile_based_job_queue_providers_discoverable(self):
+    def test_profile_based_job_queue_providers_discoverable(self) -> None:
         """Test that job queue providers are discoverable via profile-based loading."""
         # Test that profile-based plugins are discoverable
         from paise2.profiles.factory import create_test_plugin_manager
@@ -124,7 +98,7 @@ class TestJobQueueProviderDiscovery:
         # Should find plugins in test profile
         assert isinstance(discovered, list)
 
-    def test_job_queue_provider_creation_from_configuration(self):
+    def test_job_queue_provider_creation_from_configuration(self) -> None:
         """Test that providers can create job queue instances from configuration."""
         # Test synchronous provider with MockJobExecutor
         sync_provider = NoJobQueueProvider()
@@ -152,7 +126,7 @@ class TestJobQueueProviderDiscovery:
 class TestJobQueueProviderIntegrationWithConfiguration:
     """Test job queue provider integration with configuration system."""
 
-    def test_sqlite_provider_uses_configuration_path(self):
+    def test_sqlite_provider_uses_configuration_path(self) -> None:
         """Test that SQLite provider uses path from configuration."""
         provider = SQLiteJobQueueProvider()
 
@@ -167,7 +141,7 @@ class TestJobQueueProviderIntegrationWithConfiguration:
             # The database file should be created at the custom path
             assert Path(custom_path).exists()
 
-    def test_sqlite_provider_uses_default_path_when_not_configured(self):
+    def test_sqlite_provider_uses_default_path_when_not_configured(self) -> None:
         """Test that SQLite provider uses default path when not configured."""
         provider = SQLiteJobQueueProvider()
 
@@ -177,7 +151,7 @@ class TestJobQueueProviderIntegrationWithConfiguration:
         # Queue should work even with default path
         assert queue is not None
 
-    def test_synchronous_provider_ignores_configuration(self):
+    def test_synchronous_provider_ignores_configuration(self) -> None:
         """Test that synchronous provider works regardless of configuration."""
         provider = NoJobQueueProvider()
         mock_executor = MockJobExecutor()

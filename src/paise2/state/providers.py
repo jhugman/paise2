@@ -200,12 +200,16 @@ class FileStateStorageProvider:
 
     def create_state_storage(self, configuration: Configuration) -> StateStorage:
         """Create a file-based state storage instance."""
-        # Get state file path from configuration with default
-        state_file_path = configuration.get(
-            "state_storage.file_path", "~/.local/share/paise2/state.db"
-        )
+        # If a specific path is provided in configuration, use it exactly
+        path_from_config = configuration.get("state_storage.file_path")
+        if path_from_config:
+            # Use the exact path from configuration
+            db_path = Path(path_from_config)
+        else:
+            # Default path if nothing specified in configuration
+            db_path = Path("~/.local/share/paise2/state.db").expanduser().resolve()
 
-        # Expand user path and convert to Path object
-        db_path = Path(state_file_path).expanduser()
+        # Ensure parent directory exists
+        db_path.parent.mkdir(parents=True, exist_ok=True)
 
         return FileStateStorage(db_path)

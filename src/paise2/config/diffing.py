@@ -10,7 +10,7 @@ from paise2.plugins.core.interfaces import ConfigurationDiff
 
 from .models import Configuration, ConfigurationDict
 
-__all__ = ["ConfigurationDiffer", "EnhancedMergedConfiguration"]
+__all__ = ["ConcreteConfiguration", "ConfigurationDiffer"]
 
 
 class ConfigurationDiffer:
@@ -195,7 +195,7 @@ class ConfigurationDiffer:
         return current
 
 
-class EnhancedMergedConfiguration(Configuration):
+class ConcreteConfiguration(Configuration):
     """
     Enhanced implementation of Configuration protocol with diff support.
 

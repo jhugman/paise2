@@ -1,6 +1,8 @@
 # ABOUTME: Tests for profile-based plugin loading
 # ABOUTME: Validates that different profiles load different sets of plugins
 
+from __future__ import annotations
+
 import tempfile
 from pathlib import Path
 
@@ -12,12 +14,13 @@ from paise2.profiles.factory import (
     create_test_plugin_manager,
 )
 from paise2.state.providers import FileStateStorageProvider, MemoryStateStorageProvider
+from tests.fixtures import MockConfiguration
 
 
 class TestProfileBasedPluginLoading:
     """Test profile-based plugin loading functionality."""
 
-    def test_production_profile_plugins(self):
+    def test_production_profile_plugins(self) -> None:
         """Test production profile loads only file-based storage."""
         plugin_manager = create_production_plugin_manager()
 
@@ -30,7 +33,7 @@ class TestProfileBasedPluginLoading:
         assert len(state_providers) == 1
         assert isinstance(state_providers[0], FileStateStorageProvider)
 
-    def test_development_profile_plugins(self):
+    def test_development_profile_plugins(self) -> None:
         """Test development profile loads both storage providers."""
         plugin_manager = create_development_plugin_manager()
 
@@ -46,7 +49,7 @@ class TestProfileBasedPluginLoading:
         assert MemoryStateStorageProvider in provider_types
         assert FileStateStorageProvider in provider_types
 
-    def test_test_profile_plugins(self):
+    def test_test_profile_plugins(self) -> None:
         """Test test profile loads only memory-based storage."""
         plugin_manager = create_test_plugin_manager()
 
@@ -59,7 +62,7 @@ class TestProfileBasedPluginLoading:
         assert len(state_providers) == 1
         assert isinstance(state_providers[0], MemoryStateStorageProvider)
 
-    def test_custom_paise2_root(self):
+    def test_custom_paise2_root(self) -> None:
         """Test custom paise2_root parameter with arbitrary directory."""
         # Create temporary directory structure with plugins
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -96,7 +99,7 @@ def register_state_storage_provider(
             # Note: accessing private member for testing purposes
             assert plugin_manager._profile == plugin_dir  # noqa: SLF001
 
-    def test_profile_directory_structure(self):
+    def test_profile_directory_structure(self) -> None:
         """Test that profile directories exist and have expected structure."""
         paise2_root = Path(paise2.__file__).parent
 
@@ -110,7 +113,7 @@ def register_state_storage_provider(
             assert (profile_dir / "__init__.py").exists()
             assert (profile_dir / "state_storage.py").exists()
 
-    def test_plugin_manager_no_constructor_profile(self):
+    def test_plugin_manager_no_constructor_profile(self) -> None:
         """Test that PluginManager still works without profile parameter."""
         # Default constructor should still work
         plugin_manager = PluginManager()
@@ -126,7 +129,7 @@ def register_state_storage_provider(
 class TestProfilePluginIntegration:
     """Test integration between profiles and plugin system functionality."""
 
-    def test_profile_state_storage_creation(self):
+    def test_profile_state_storage_creation(self) -> None:
         """Test that providers from profiles can create storage instances."""
         # Test each profile's state storage
         for create_func, expected_type in [
@@ -144,18 +147,14 @@ class TestProfilePluginIntegration:
             provider = next(p for p in providers if isinstance(p, expected_type))
 
             # Simple configuration for testing
-            class MockConfig:
-                def get(self, key: str, default=None):
-                    if key == "state_storage.file_path":
-                        return ":memory:"  # SQLite in-memory for testing
-                    return default
+            config = MockConfiguration({"state_storage.file_path": ":memory:"})
 
-            storage = provider.create_state_storage(MockConfig())
+            storage = provider.create_state_storage(config)
             assert storage is not None
             assert hasattr(storage, "store")
             assert hasattr(storage, "get")
 
-    def test_development_profile_provider_selection(self):
+    def test_development_profile_provider_selection(self) -> None:
         """Test development profile's multiple providers."""
         plugin_manager = create_development_plugin_manager()
         plugin_manager.discover_plugins()
@@ -176,11 +175,7 @@ class TestProfilePluginIntegration:
         assert file_provider is not None
 
         # Both should be able to create storage
-        class MockConfig:
-            def get(self, key: str, default=None):
-                return default
-
-        config = MockConfig()
+        config = MockConfiguration({})
         memory_storage = memory_provider.create_state_storage(config)
         file_storage = file_provider.create_state_storage(config)
 

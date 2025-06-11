@@ -5,20 +5,21 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock
 
 import yaml
 
 from paise2.config.factory import ConfigurationFactory
 from paise2.config.manager import ConfigurationManager
-from paise2.plugins.core.interfaces import ConfigurationProvider
+from paise2.plugins.core.interfaces import Configuration, ConfigurationProvider
 from paise2.plugins.core.registry import PluginManager
+from paise2.utils.logging import SimpleInMemoryLogger
+from tests.fixtures import MockStateStorage
 
 
 class MockConfigProvider(ConfigurationProvider):
     """Mock configuration provider for testing."""
 
-    def __init__(self, config_yaml: str, config_id: str = "test"):
+    def __init__(self, config_yaml: str, config_id: str = "test") -> None:
         self._config_yaml = config_yaml
         self._config_id = config_id
 
@@ -29,21 +30,24 @@ class MockConfigProvider(ConfigurationProvider):
         return self._config_id
 
 
+# Use SimpleInMemoryLogger instead of this mock logger class
+
+
 class TestConfigurationFactory:
     """Test configuration factory functionality."""
 
-    def test_configuration_factory_creation(self):
+    def test_configuration_factory_creation(self) -> None:
         """Test basic configuration factory creation."""
         factory = ConfigurationFactory()
         assert factory is not None
 
-    def test_configuration_factory_with_custom_manager(self):
+    def test_configuration_factory_with_custom_manager(self) -> None:
         """Test configuration factory with custom configuration manager."""
         custom_manager = ConfigurationManager()
         factory = ConfigurationFactory(custom_manager)
         assert factory is not None
 
-    def test_create_configuration_from_plugins_only(self):
+    def test_create_configuration_from_plugins_only(self) -> None:
         """Test creating configuration from plugins without user overrides."""
         # Setup
         plugin_manager = PluginManager()
@@ -67,7 +71,7 @@ class TestConfigurationFactory:
         assert config.get("app.debug") is False
         assert config.get("features") == ["auth", "logging"]
 
-    def test_create_configuration_with_user_dict_override(self):
+    def test_create_configuration_with_user_dict_override(self) -> None:
         """Test creating configuration with user dictionary overrides."""
         # Setup plugins
         plugin_manager = PluginManager()
@@ -94,7 +98,7 @@ class TestConfigurationFactory:
         assert config.get("app.port") == 8080  # User addition
         assert config.get("logging.level") == "DEBUG"  # User override
 
-    def test_create_configuration_with_file_override(self):
+    def test_create_configuration_with_file_override(self) -> None:
         """Test creating configuration with user configuration file."""
         # Setup plugins
         plugin_manager = PluginManager()
@@ -123,7 +127,7 @@ class TestConfigurationFactory:
         finally:
             Path(config_file_path).unlink()
 
-    def test_user_dict_takes_precedence_over_file(self):
+    def test_user_dict_takes_precedence_over_file(self) -> None:
         """Test that user dictionary takes precedence over configuration file."""
         # Setup plugins
         plugin_manager = PluginManager()
@@ -153,7 +157,7 @@ class TestConfigurationFactory:
         finally:
             Path(config_file_path).unlink()
 
-    def test_configuration_factory_handles_invalid_yaml(self):
+    def test_configuration_factory_handles_invalid_yaml(self) -> None:
         """Test that factory handles invalid YAML gracefully."""
         plugin_manager = PluginManager()
 
@@ -171,7 +175,7 @@ class TestConfigurationFactory:
         # Should still work with valid provider
         assert config.get("app.name") == "ValidApp"
 
-    def test_configuration_factory_handles_missing_config_file(self):
+    def test_configuration_factory_handles_missing_config_file(self) -> None:
         """Test that factory handles missing configuration file gracefully."""
         plugin_manager = PluginManager()
         provider = MockConfigProvider("app:\n  name: TestApp")
@@ -185,7 +189,7 @@ class TestConfigurationFactory:
         # Should use plugin config only
         assert config.get("app.name") == "TestApp"
 
-    def test_configuration_factory_empty_plugin_manager(self):
+    def test_configuration_factory_empty_plugin_manager(self) -> None:
         """Test factory with empty plugin manager."""
         plugin_manager = PluginManager()  # No providers registered
 
@@ -199,10 +203,12 @@ class TestConfigurationFactory:
 class TestConfigurationFactoryIntegration:
     """Test configuration factory integration patterns."""
 
-    def test_application_configuration_setup_pattern(self):
+    def test_application_configuration_setup_pattern(self) -> None:
         """Test typical application configuration setup pattern."""
 
-        def setup_application_configuration(config_file_path: str | None = None):
+        def setup_application_configuration(
+            config_file_path: str | None = None,
+        ) -> Configuration:
             """Typical application setup function."""
             # 1. Create plugin manager and discover plugins
             plugin_manager = PluginManager()
@@ -228,7 +234,7 @@ class TestConfigurationFactoryIntegration:
 
         assert config.get("app.initialized") is True
 
-    def test_configuration_factory_with_host_creation(self):
+    def test_configuration_factory_with_host_creation(self) -> None:
         """Test using configuration factory with host creation."""
         from paise2.plugins.core.hosts import BaseHost
 
@@ -242,9 +248,9 @@ class TestConfigurationFactoryIntegration:
 
         # Create host with configuration
         host = BaseHost(
-            logger=Mock(),
+            logger=SimpleInMemoryLogger(),
             configuration=config,
-            state_storage=Mock(),
+            state_storage=MockStateStorage(),
             plugin_module_name="test.plugin",
         )
 

@@ -426,7 +426,7 @@ class PluginManager:
             return False
 
         try:
-            # Get all methods that should be implemented
+            # Check methods manually.
             protocol_methods = self._get_protocol_methods(protocol_class)
 
             for method_name in protocol_methods:

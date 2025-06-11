@@ -1,15 +1,15 @@
 # ABOUTME: Tests for configuration diffing and state management functionality
-# ABOUTME: Covers ConfigurationDiffer, EnhancedMergedConfiguration, and diff calculation
+# ABOUTME: Covers ConfigurationDiffer, ConfigurationImpl, and diff calculation
 
 
-from paise2.config.diffing import ConfigurationDiffer, EnhancedMergedConfiguration
+from paise2.config.diffing import ConcreteConfiguration, ConfigurationDiffer
 from paise2.plugins.core.interfaces import ConfigurationDiff
 
 
 class TestConfigurationDiffer:
     """Test configuration diff calculation."""
 
-    def test_calculate_diff_added(self):
+    def test_calculate_diff_added(self) -> None:
         """Test detecting added configuration."""
         old_config = {"plugin_a": {"setting1": "value1"}}
         new_config = {
@@ -23,7 +23,7 @@ class TestConfigurationDiffer:
         assert diff.added["plugin_b"]["setting2"] == "value2"
         assert "plugin_a" in diff.unchanged
 
-    def test_calculate_diff_removed(self):
+    def test_calculate_diff_removed(self) -> None:
         """Test detecting removed configuration."""
         old_config = {
             "plugin_a": {"setting1": "value1"},
@@ -37,7 +37,7 @@ class TestConfigurationDiffer:
         assert diff.removed["plugin_b"]["setting2"] == "value2"
         assert "plugin_a" in diff.unchanged
 
-    def test_calculate_diff_modified(self):
+    def test_calculate_diff_modified(self) -> None:
         """Test detecting modified configuration."""
         old_config = {"plugin_a": {"setting1": "old_value"}}
         new_config = {"plugin_a": {"setting1": "new_value"}}
@@ -52,7 +52,7 @@ class TestConfigurationDiffer:
         # Modified section should be empty (kept for backwards compatibility)
         assert len(diff.modified) == 0
 
-    def test_calculate_diff_nested_changes(self):
+    def test_calculate_diff_nested_changes(self) -> None:
         """Test detecting changes in nested configuration."""
         old_config = {
             "plugin_a": {
@@ -81,7 +81,7 @@ class TestConfigurationDiffer:
         assert "plugin_a" in diff.unchanged
         assert diff.unchanged["plugin_a"]["section2"]["setting2"] == "value2"
 
-    def test_calculate_diff_no_changes(self):
+    def test_calculate_diff_no_changes(self) -> None:
         """Test when there are no changes."""
         config = {"plugin_a": {"setting1": "value1"}}
 
@@ -92,7 +92,7 @@ class TestConfigurationDiffer:
         assert len(diff.modified) == 0
         assert "plugin_a" in diff.unchanged
 
-    def test_has_path_changed_positive(self):
+    def test_has_path_changed_positive(self) -> None:
         """Test detecting path changes."""
         diff = ConfigurationDiff(
             added={
@@ -107,7 +107,7 @@ class TestConfigurationDiffer:
         assert ConfigurationDiffer.has_path_changed(diff, "plugin_a.new_setting")
         assert ConfigurationDiffer.has_path_changed(diff, "plugin_b.old_setting")
 
-    def test_has_path_changed_negative(self):
+    def test_has_path_changed_negative(self) -> None:
         """Test when path hasn't changed."""
         diff = ConfigurationDiff(
             added={"plugin_a": {"new_setting": "value"}},
@@ -119,13 +119,13 @@ class TestConfigurationDiffer:
         assert not ConfigurationDiffer.has_path_changed(diff, "plugin_b.setting")
         assert not ConfigurationDiffer.has_path_changed(diff, "plugin_c.setting")
 
-    def test_values_equal_different_types(self):
+    def test_values_equal_different_types(self) -> None:
         """Test value equality with different types."""
         assert ConfigurationDiffer._values_equal("123", 123) is False  # noqa: SLF001
         assert ConfigurationDiffer._values_equal(True, "true") is False  # noqa: SLF001
         assert ConfigurationDiffer._values_equal([1, 2, 3], [1, 2, 3]) is True  # noqa: SLF001
 
-    def test_get_path_value_from_diff_dict(self):
+    def test_get_path_value_from_diff_dict(self) -> None:
         """Test retrieving values from diff dictionary using dotted paths."""
         diff_dict = {"plugin_a": {"section1": {"setting1": "value1"}}}
 
@@ -140,23 +140,23 @@ class TestConfigurationDiffer:
         assert result == "default"
 
 
-class TestEnhancedMergedConfiguration:
+class TestConfigurationImpl:
     """Test enhanced configuration with diff support."""
 
-    def test_enhanced_configuration_basic_access(self):
+    def test_enhanced_configuration_basic_access(self) -> None:
         """Test basic configuration access."""
         config_data = {
             "plugin_a": {"setting1": "value1"},
             "plugin_b": {"setting2": "value2"},
         }
 
-        config = EnhancedMergedConfiguration(config_data)
+        config = ConcreteConfiguration(config_data)
 
         assert config.get("plugin_a.setting1") == "value1"
         assert config.get("plugin_b.setting2") == "value2"
         assert config.get("nonexistent", "default") == "default"
 
-    def test_enhanced_configuration_with_diff(self):
+    def test_enhanced_configuration_with_diff(self) -> None:
         """Test configuration with diff information."""
         config_data = {
             "plugin_a": {"setting1": "new_value"},
@@ -173,7 +173,7 @@ class TestEnhancedMergedConfiguration:
             unchanged={},
         )
 
-        config = EnhancedMergedConfiguration(config_data, diff)
+        config = ConcreteConfiguration(config_data, diff)
 
         # Test has_changed
         assert config.has_changed("plugin_a.setting1")
@@ -189,25 +189,25 @@ class TestEnhancedMergedConfiguration:
         # Test diff property
         assert config.last_diff == diff
 
-    def test_enhanced_configuration_no_diff(self):
+    def test_enhanced_configuration_no_diff(self) -> None:
         """Test configuration without diff information."""
         config_data = {"plugin_a": {"setting1": "value1"}}
 
-        config = EnhancedMergedConfiguration(config_data)
+        config = ConcreteConfiguration(config_data)
 
         assert not config.has_changed("plugin_a.setting1")
         assert config.addition("plugin_a.setting1") is None
         assert config.removal("plugin_a.setting1") is None
         assert config.last_diff is None
 
-    def test_enhanced_configuration_get_section(self):
+    def test_enhanced_configuration_get_section(self) -> None:
         """Test getting entire configuration sections."""
         config_data = {
             "plugin_a": {"setting1": "value1", "setting2": "value2"},
             "plugin_b": {"setting3": "value3"},
         }
 
-        config = EnhancedMergedConfiguration(config_data)
+        config = ConcreteConfiguration(config_data)
 
         section = config.get_section("plugin_a")
         assert section["setting1"] == "value1"
@@ -216,7 +216,7 @@ class TestEnhancedMergedConfiguration:
         empty_section = config.get_section("nonexistent")
         assert empty_section == {}
 
-    def test_enhanced_configuration_removal_access(self):
+    def test_enhanced_configuration_removal_access(self) -> None:
         """Test accessing removed configuration values."""
         config_data = {"plugin_a": {"setting1": "value1"}}
 
@@ -227,12 +227,12 @@ class TestEnhancedMergedConfiguration:
             unchanged={"plugin_a": {"setting1": "value1"}},
         )
 
-        config = EnhancedMergedConfiguration(config_data, diff)
+        config = ConcreteConfiguration(config_data, diff)
 
         assert config.removal("plugin_b.removed_setting") == "removed_value"
         assert config.removal("nonexistent", "default") == "default"
 
-    def test_enhanced_configuration_complex_path_changes(self):
+    def test_enhanced_configuration_complex_path_changes(self) -> None:
         """Test complex nested path changes."""
         config_data = {
             "plugin_a": {
@@ -253,7 +253,7 @@ class TestEnhancedMergedConfiguration:
             unchanged={},
         )
 
-        config = EnhancedMergedConfiguration(config_data, diff)
+        config = ConcreteConfiguration(config_data, diff)
 
         # These should detect changes
         assert config.has_changed("plugin_a.section1.setting1")

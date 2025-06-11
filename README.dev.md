@@ -12,7 +12,7 @@ uv add --dev <package>        # Development dependency
 
 # Run tools
 uv run pytest                 # Run tests
-uv run mypy src/              # Type checking
+uv run mypy src tests         # Type checking
 uv run ruff check             # Linting
 uv run ruff check --fix       # Auto-fix linting issues
 

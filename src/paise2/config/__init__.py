@@ -2,7 +2,7 @@
 # ABOUTME: Provides configuration loading, merging, and provider system
 
 from .factory import ConfigurationFactory
-from .manager import ConfigurationManager, MergedConfiguration
+from .manager import ConfigurationManager
 from .models import Configuration, ConfigurationDict
 from .providers import FileConfigurationProvider
 
@@ -12,5 +12,4 @@ __all__ = [
     "ConfigurationFactory",
     "ConfigurationManager",
     "FileConfigurationProvider",
-    "MergedConfiguration",
 ]

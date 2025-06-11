@@ -60,6 +60,7 @@ ignore = [
     "C901",    # Complex functions in comprehensive test cases
 ]
 
+# Update mypy task to include tests directory
 [tool.mypy]
 python_version = "3.8"
 warn_return_any = true
@@ -75,14 +76,16 @@ warn_no_return = true
 warn_unreachable = true
 strict_equality = true
 
-# Less strict checking for test files
+# Start with moderate strictness for test files
 [[tool.mypy.overrides]]
 module = "tests.*"
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+# Allow untyped decorators for pytest decorators
 disallow_untyped_decorators = false
+# Allow some return any for mock objects
 warn_return_any = false
-check_untyped_defs = false
+check_untyped_defs = true
 
 [dependency-groups]
 dev = [
