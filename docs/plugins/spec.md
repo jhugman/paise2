@@ -168,7 +168,7 @@ JOB_TYPES = {
 }
 
 class JobQueueProvider(Protocol):
-    def create_job_queue(self, configuration: Configuration) -> JobQueue: ...
+    def create_job_queue(self, configuration: Configuration, job_executor: JobExecutor | None = None) -> JobQueue: ...
 
 class JobQueue(Protocol):
     async def enqueue(self, job_type: str, job_data: Dict[str, Any], priority: int = 0) -> JobId: ...
@@ -185,15 +185,28 @@ class Job:
     priority: int
     created_at: datetime
     worker_id: Optional[str] = None
+
+class JobExecutor(Protocol):
+    async def execute_job(self, job: Job) -> Dict[str, Any]: ...
+    def register_handler(self, job_type: str, handler: Callable[[Dict[str, Any]], Awaitable[Dict[str, Any]]]) -> None: ...
+    def get_registered_types(self) -> List[str]: ...
 ```
+
+**Binary Data Handling:**
+Job queues must support storing and retrieving binary data (bytes) in `job_data` fields, as content fetchers need to pass `Content = bytes | str` to content extractors through the job queue. The reference SQLite implementation uses pickle serialization with protocol versioning to handle binary data transparently while maintaining security through trusted data assumptions.
+
+**JobExecutor Architecture:**
+Job queue providers can optionally accept a `JobExecutor` for separating job storage from execution logic. Synchronous queues require a `JobExecutor` for immediate execution, while persistent queues use external workers and ignore the executor parameter. This enables flexible deployment patterns from development (immediate execution) to production (worker-based processing).
 
 **Default Implementations Available:**
 
 ```python
 # For development - executes jobs immediately without queuing
 class NoJobQueueProvider(JobQueueProvider):
-    def create_job_queue(self, configuration: Configuration) -> JobQueue:
-        return SynchronousJobQueue()
+    def create_job_queue(self, configuration: Configuration, job_executor: JobExecutor | None = None) -> JobQueue:
+        if job_executor is None:
+            raise ValueError("SynchronousJobQueue requires a JobExecutor for immediate execution")
+        return SynchronousJobQueue(job_executor)
 
 class SynchronousJobQueue(JobQueue):
     async def enqueue(self, job_type: str, job_data: Dict[str, Any], priority: int = 0) -> JobId:
@@ -212,7 +225,8 @@ class SynchronousJobQueue(JobQueue):
 
 # For production - SQLite-based persistent job queue
 class SQLiteJobQueueProvider(JobQueueProvider):
-    def create_job_queue(self, configuration: Configuration) -> JobQueue:
+    def create_job_queue(self, configuration: Configuration, job_executor: JobExecutor | None = None) -> JobQueue:
+        # SQLite queues use external workers, executor ignored
         db_path = configuration.get("job_queue.sqlite_path", "jobs.db")
         return SQLiteJobQueue(db_path)
 ```

@@ -4,7 +4,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, Protocol, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Protocol,
+    runtime_checkable,
+)
 
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
@@ -322,12 +330,16 @@ class JobQueueProvider(Protocol):
     asynchronous work processing.
     """
 
-    def create_job_queue(self, configuration: Configuration) -> JobQueue:
+    def create_job_queue(
+        self, configuration: Configuration, job_executor: JobExecutor | None = None
+    ) -> JobQueue:
         """
         Create a job queue instance using the provided configuration.
 
         Args:
             configuration: System configuration dictionary
+            job_executor: Optional job executor for immediate execution
+                         (required for synchronous queues, ignored for persistent)
 
         Returns:
             JobQueue instance
@@ -401,6 +413,56 @@ class JobQueue(Protocol):
 
         Returns:
             List of incomplete jobs
+        """
+        ...
+
+
+@runtime_checkable
+class JobExecutor(Protocol):
+    """
+    Interface for executing jobs by routing them to appropriate handlers.
+
+    Provides the core job execution logic that can be used by both
+    synchronous queues (immediate execution) and persistent queues
+    (worker-based execution).
+    """
+
+    async def execute_job(self, job: Job) -> dict[str, Any]:
+        """
+        Execute a job and return the result.
+
+        Args:
+            job: Job to execute
+
+        Returns:
+            Job execution result data
+
+        Raises:
+            ValueError: If no handler is registered for the job type
+            Exception: Any exception from the job handler
+        """
+        ...
+
+    def register_handler(
+        self,
+        job_type: str,
+        handler: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
+    ) -> None:
+        """
+        Register a handler function for a specific job type.
+
+        Args:
+            job_type: Type of job this handler can process
+            handler: Async function that takes job_data and returns result
+        """
+        ...
+
+    def get_registered_types(self) -> list[str]:
+        """
+        Get list of job types that have registered handlers.
+
+        Returns:
+            List of job types with handlers
         """
         ...
 
