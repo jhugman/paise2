@@ -299,6 +299,9 @@ class SQLiteJobQueueProvider:
             "job_queue.sqlite_path", "~/.local/share/paise2/jobs.db"
         )
 
+        if db_path == ":memory:":
+            return SQLiteJobQueue(None)
+
         # Default path only if nothing specified in configuration
         default_path = Path(db_path).expanduser().resolve()
         return SQLiteJobQueue(default_path)
@@ -312,7 +315,7 @@ class SQLiteJobQueue:
     priority handling, retry logic, and resumability.
     """
 
-    def __init__(self, db_path: Path) -> None:
+    def __init__(self, db_path: Path | None) -> None:
         """
         Initialize SQLite job queue.
 
@@ -322,12 +325,15 @@ class SQLiteJobQueue:
         self.db_path = db_path
         self._init_database()
 
+    def _connection(self) -> sqlite3.Connection:
+        if self.db_path is not None:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        return sqlite3.connect(self.db_path or ":memory:")
+
     def _init_database(self) -> None:
         """Initialize the SQLite database schema."""
         # Ensure parent directory exists
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connection() as conn:
             # (Re)create the table with the correct schema
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS jobs (
@@ -380,7 +386,7 @@ class SQLiteJobQueue:
         job_data_blob = pickle.dumps(job_data, protocol=PICKLE_PROTOCOL)
         created_at = datetime.now().isoformat()
 
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connection() as conn:
             conn.execute(
                 """
                 INSERT INTO jobs (
@@ -414,7 +420,7 @@ class SQLiteJobQueue:
         """
         from paise2.plugins.core.interfaces import Job
 
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connection() as conn:
             # Get the highest priority pending job
             cursor = conn.execute("""
                 SELECT job_id, job_type, job_data, pickle_version, priority, created_at
@@ -477,7 +483,7 @@ class SQLiteJobQueue:
             # should be stored in the job queue.
             result_blob = pickle.dumps(result, protocol=PICKLE_PROTOCOL)
 
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connection() as conn:
             conn.execute(
                 """
                 UPDATE jobs
@@ -499,7 +505,7 @@ class SQLiteJobQueue:
         """
         new_status = "pending" if retry else "failed"
 
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connection() as conn:
             # Increment retry count and update status
             conn.execute(
                 """
@@ -521,7 +527,7 @@ class SQLiteJobQueue:
         """
         from paise2.plugins.core.interfaces import Job
 
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connection() as conn:
             cursor = conn.execute("""
                 SELECT
                     job_id, job_type, job_data, pickle_version,

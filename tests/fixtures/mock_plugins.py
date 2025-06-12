@@ -379,7 +379,9 @@ class MockCacheManager:
     def _prefix(self, partition_key: str) -> str:
         return f"cache_{partition_key}_"
 
-    async def save(self, partition_key: str, content: bytes | str) -> str:
+    async def save(
+        self, partition_key: str, content: bytes | str, file_extension: str = ""
+    ) -> str:
         """Save content to cache."""
         prefix = self._prefix(partition_key)
         cache_id = f"{prefix}{self._next_id}"

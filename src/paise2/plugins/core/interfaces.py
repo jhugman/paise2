@@ -644,7 +644,9 @@ class CacheManager(Protocol):
     and content management.
     """
 
-    async def save(self, partition_key: str, content: Content) -> CacheId:
+    async def save(
+        self, partition_key: str, content: Content, file_extension: str = ""
+    ) -> CacheId:
         """
         Save content to cache and return a cache ID.
 

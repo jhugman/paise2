@@ -86,16 +86,19 @@ class FileStateStorage:
     Uses SQLite for reliable transactions and data integrity.
     """
 
-    def __init__(self, db_path: Path) -> None:
+    def __init__(self, db_path: Path | None) -> None:
         self.db_path = db_path
         self._init_database()
+
+    def _connection(self) -> sqlite3.Connection:
+        if self.db_path is not None:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        return sqlite3.connect(self.db_path or ":memory:")
 
     def _init_database(self) -> None:
         """Initialize the SQLite database schema."""
         # Ensure parent directory exists
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connection() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS state_entries (
                     partition_key TEXT NOT NULL,
@@ -125,7 +128,7 @@ class FileStateStorage:
         # Serialize value to JSON for storage
         value_json = json.dumps(value)
 
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connection() as conn:
             conn.execute(
                 """
                 INSERT OR REPLACE INTO state_entries
@@ -138,7 +141,7 @@ class FileStateStorage:
 
     def get(self, partition_key: str, key: str, default: Any = None) -> Any:
         """Retrieve a stored value."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connection() as conn:
             cursor = conn.execute(
                 """
                 SELECT value FROM state_entries
@@ -157,7 +160,7 @@ class FileStateStorage:
         self, partition_key: str, older_than_version: int
     ) -> list[tuple[str, Any, int]]:
         """Get all state entries older than a specific version."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connection() as conn:
             cursor = conn.execute(
                 """
                 SELECT key, value, version FROM state_entries
@@ -179,7 +182,7 @@ class FileStateStorage:
         """Find all keys that have a specific value."""
         value_json = json.dumps(value)
 
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connection() as conn:
             cursor = conn.execute(
                 """
                 SELECT key FROM state_entries
@@ -201,15 +204,13 @@ class FileStateStorageProvider:
     def create_state_storage(self, configuration: Configuration) -> StateStorage:
         """Create a file-based state storage instance."""
         # If a specific path is provided in configuration, use it exactly
-        path_from_config = configuration.get("state_storage.file_path")
-        if path_from_config:
-            # Use the exact path from configuration
-            db_path = Path(path_from_config)
-        else:
-            # Default path if nothing specified in configuration
-            db_path = Path("~/.local/share/paise2/state.db").expanduser().resolve()
+        path_from_config = configuration.get(
+            "state_storage.file_path", "~/.local/share/paise2/state.db"
+        )
+        if path_from_config == ":memory:":
+            return FileStateStorage(None)
 
+        db_path = Path(path_from_config).expanduser().resolve()
         # Ensure parent directory exists
         db_path.parent.mkdir(parents=True, exist_ok=True)
-
         return FileStateStorage(db_path)

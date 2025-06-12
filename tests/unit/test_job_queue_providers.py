@@ -176,10 +176,11 @@ class TestSQLiteJobQueueProvider:
             assert isinstance(queue, SQLiteJobQueue)
             # Just check that the db_path points to a file in the temp directory
             # We don't care about the exact path, just that it's a working database
-            assert custom_path in str(queue.db_path) or queue.db_path.exists()
+            assert queue.db_path is not None
+            assert queue.db_path.exists()
 
             # Test that the queue works with this path
-            with sqlite3.connect(queue.db_path) as conn:
+            with sqlite3.connect(queue.db_path or ":memory:") as conn:
                 conn.execute("SELECT 1")  # Simple test query
 
     def test_handles_path_expansion(self) -> None:
