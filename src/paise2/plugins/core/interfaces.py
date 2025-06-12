@@ -182,22 +182,24 @@ class DataStorageProvider(Protocol):
 @runtime_checkable
 class DataStorage(Protocol):
     """
-    Interface for storing and retrieving indexed content and metadata.
+    Interface for storing and retrieving indexed metadata.
 
-    Handles the persistence of processed content with proper metadata
-    management and supports deduplication and cleanup operations.
+    Handles the persistence of metadata for indexed content.
+    The actual content is stored elsewhere (in cache or original location).
+    This component focuses on efficient storage of metadata to support indexing.
     """
 
     async def add_item(
-        self, host: DataStorageHost, content: str, metadata: Metadata
+        self, host: DataStorageHost, content: Content, metadata: Metadata
     ) -> ItemId:
         """
         Add a new item to storage.
 
         Args:
             host: Host interface for system interaction
-            content: Text content to store
-            metadata: Associated metadata
+            content: Text or binary content (used only for
+            computing content-based fields) metadata: Associated
+            metadata to store
 
         Returns:
             Unique identifier for the stored item
@@ -205,15 +207,18 @@ class DataStorage(Protocol):
         ...
 
     async def update_item(
-        self, host: DataStorageHost, item_id: ItemId, content: str
+        self, host: DataStorageHost, item_id: ItemId, content: Content
     ) -> None:
         """
-        Update the content of an existing item.
+        Update content-derived data for an existing item.
+
+        This doesn't store the content itself but updates any derived data
+        (like hashes or embeddings) computed from the content.
 
         Args:
             host: Host interface for system interaction
             item_id: Identifier of item to update
-            content: New content
+            content: New content for computing derived fields
         """
         ...
 

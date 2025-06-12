@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from paise2.models import CacheId, ItemId, JobId, Metadata
+from paise2.models import CacheId, Content, ItemId, JobId, Metadata
 from paise2.plugins.core.interfaces import (
     # Host interfaces
     BaseHost,
@@ -67,12 +67,12 @@ class TestPhase2Protocols:
 
         class TestStorage:
             async def add_item(
-                self, host: DataStorageHost, content: str, metadata: Metadata
+                self, host: DataStorageHost, content: Content, metadata: Metadata
             ) -> ItemId:
                 return "test-item-id"
 
             async def update_item(
-                self, host: DataStorageHost, item_id: ItemId, content: str
+                self, host: DataStorageHost, item_id: ItemId, content: Content
             ) -> None:
                 pass
 
@@ -677,12 +677,12 @@ class TestAsyncProtocolMethods:
 
         class TestDataStorage:
             async def add_item(
-                self, host: DataStorageHost, content: str, metadata: Metadata
+                self, host: DataStorageHost, content: Content, metadata: Metadata
             ) -> ItemId:
                 return "test-item-id"
 
             async def update_item(
-                self, host: DataStorageHost, item_id: ItemId, content: str
+                self, host: DataStorageHost, item_id: ItemId, content: Content
             ) -> None:
                 pass
 

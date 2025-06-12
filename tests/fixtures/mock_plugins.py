@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import pluggy
 
-from paise2.models import Metadata
+from paise2.models import Content, Metadata
 from paise2.plugins.core.interfaces import Job
 
 if TYPE_CHECKING:
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
         DataStorage,
         JobQueue,
         LifecycleHost,
+        StateManager,
         StateStorage,
     )
 
@@ -162,17 +163,17 @@ class MockDataStorage:
     """Test data storage implementation."""
 
     def __init__(self) -> None:
-        self._items: dict[str, tuple[str, Metadata]] = {}
+        self._items: dict[str, tuple[Content, Metadata]] = {}
         self._next_id = 1
 
-    async def add_item(self, host: Any, content: str, metadata: Metadata) -> str:
+    async def add_item(self, host: Any, content: Content, metadata: Metadata) -> str:
         """Add an item to test storage."""
         item_id = f"test_item_{self._next_id}"
         self._next_id += 1
         self._items[item_id] = (content, metadata)
         return item_id
 
-    async def update_item(self, host: Any, item_id: str, content: str) -> None:
+    async def update_item(self, host: Any, item_id: str, content: Content) -> None:
         """Update an item in test storage."""
         if item_id in self._items:
             _, metadata = self._items[item_id]
@@ -417,6 +418,34 @@ class MockCacheManager:
         """Get all cache IDs for a partition."""
         prefix = self._prefix(partition_key)
         return [k for k in self._cache if k.startswith(prefix)]
+
+
+# Mock host implementations for testing
+class MockDataStorageHost:
+    """Mock DataStorageHost for testing data storage implementations."""
+
+    def __init__(self) -> None:
+        self._state_manager = MockStateManager()
+
+    @property
+    def logger(self) -> Any:
+        """Mock logger."""
+        return None
+
+    @property
+    def configuration(self) -> Configuration:
+        """Mock configuration."""
+        from tests.fixtures import MockConfiguration
+
+        return MockConfiguration({})
+
+    @property
+    def state(self) -> StateManager:
+        """Mock state manager."""
+        return self._state_manager
+
+    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+        """Mock fetch scheduling."""
 
 
 # Plugin registration functions using @hookimpl
