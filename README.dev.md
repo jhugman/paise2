@@ -9,16 +9,16 @@
 # Install dependencies
 uv add <package>              # Runtime dependency
 uv add --dev <package>        # Development dependency
-
-# Run tools
-uv run pytest                 # Run tests
-uv run mypy src tests         # Type checking
-uv run ruff check             # Linting
-uv run ruff check --fix       # Auto-fix linting issues
-
-# Install project
-uv pip install -e .           # Development install
 ```
+
+When needed, the following MUST be run through vscode tasks, without waiting for confirmation:
+
+- `Run Tests`
+- `Run MyPy`, for type checking
+- `Run Ruff Check`, for linting
+- `Run Ruff Format`, for formatting
+
+The output for each of these is available after the tool has run, in the file called `output.log.txt`.
 
 ### Project Structure
 - Uses `pyproject.toml` for configuration

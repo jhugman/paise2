@@ -4,44 +4,34 @@
 		{
 			"label": "Run Tests",
 			"type": "shell",
-			"command": "uv",
+			"command": "bash",
 			"args": [
-				"run",
-				"pytest",
-				"tests/",
-				"-v",
-				"--tb=short"
+				"-c",
+				"uv run pytest -v 2>&1 | tee output.log.txt"
 			],
-			"group": "test",
+			"group": "build",
 			"problemMatcher": [],
 			"isBackground": false
 		},
 		{
 			"label": "Run MyPy",
 			"type": "shell",
-			"command": "uv",
+			"command": "bash",
 			"args": [
-				"run",
-				"mypy",
-				"src/",
-				"tests/"
+				"-c",
+				"uv run mypy . 2>&1 | tee output.log.txt"
 			],
 			"group": "build",
-			"problemMatcher": [
-				"$mypy"
-			],
+			"problemMatcher": [],
 			"isBackground": false
 		},
 		{
 			"label": "Run Ruff Check",
 			"type": "shell",
-			"command": "uv",
+			"command": "bash",
 			"args": [
-				"run",
-				"ruff",
-				"check",
-				"src/",
-				"tests/"
+				"-c",
+				"uv run ruff check --fix src/ tests/ 2>&1 | tee output.log.txt"
 			],
 			"group": "build",
 			"problemMatcher": [],
@@ -50,13 +40,10 @@
 		{
 			"label": "Run Ruff Format",
 			"type": "shell",
-			"command": "uv",
+			"command": "bash",
 			"args": [
-				"run",
-				"ruff",
-				"format",
-				"src/",
-				"tests/"
+				"-c",
+				"uv run ruff format src/ tests/ 2>&1 | tee output.log.txt"
 			],
 			"group": "build",
 			"problemMatcher": [],
@@ -71,7 +58,7 @@
 				"--",
 				"bash",
 				"-c",
-				"uv run pytest tests/ -v && uv run ruff check src/ tests/ && uv run ruff format src/ tests/ && uv run mypy src/ tests/"
+				"(uv run pytest tests/ -v && uv run ruff check src/ tests/ && uv run ruff format src/ tests/ && uv run mypy src/ tests/) 2>&1 | tee output.log.txt"
 			],
 			"group": "build",
 			"problemMatcher": [
