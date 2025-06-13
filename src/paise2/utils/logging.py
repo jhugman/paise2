@@ -12,6 +12,8 @@ class SimpleInMemoryLogger:
 
     This logger captures log messages during system startup before
     the real logger is configured. Messages can be replayed later.
+
+    Implements the Logger protocol for consistency.
     """
 
     def __init__(self) -> None:

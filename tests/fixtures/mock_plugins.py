@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import pluggy
@@ -19,11 +19,59 @@ if TYPE_CHECKING:
         ContentFetcherHost,
         ContentSourceHost,
         DataStorage,
+        JobExecutor,
         JobQueue,
         LifecycleHost,
         StateManager,
         StateStorage,
     )
+
+
+# Logger Protocol and Mock
+
+
+class MockLogger:
+    """Test double for logger that captures log messages."""
+
+    def __init__(self) -> None:
+        self.logs: list[tuple[str, str]] = []
+
+    def debug(self, message: str) -> None:
+        """Log a debug message."""
+        self.logs.append(("DEBUG", message))
+
+    def info(self, message: str) -> None:
+        """Log an info message."""
+        self.logs.append(("INFO", message))
+
+    def warning(self, message: str) -> None:
+        """Log a warning message."""
+        self.logs.append(("WARNING", message))
+
+    def error(self, message: str) -> None:
+        """Log an error message."""
+        self.logs.append(("ERROR", message))
+
+    def clear(self) -> None:
+        """Clear all logged messages."""
+        self.logs.clear()
+
+    @property
+    def messages(self) -> list[str]:
+        """Get all log messages."""
+        return [msg for _, msg in self.logs]
+
+    def get_logs_by_level(self, level: str) -> list[str]:
+        """Get all log messages for a specific level."""
+        return [msg for lvl, msg in self.logs if lvl == level]
+
+    def clear_logs(self) -> None:
+        """Clear all captured logs."""
+        self.logs.clear()
+
+    def reset_mock(self) -> None:
+        """Reset the mock for compatibility with Mock interface."""
+        self.clear_logs()
 
 
 # Test Configuration Provider
@@ -235,7 +283,9 @@ class MockDataStorage:
 class MockJobQueueProvider:
     """Test job queue provider for plugin registration testing."""
 
-    def create_job_queue(self, configuration: Configuration) -> JobQueue:
+    def create_job_queue(
+        self, configuration: Configuration, job_executor: JobExecutor | None = None
+    ) -> JobQueue:
         """Create a test job queue implementation."""
         return MockJobQueue()
 
@@ -446,6 +496,150 @@ class MockDataStorageHost:
 
     def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
         """Mock fetch scheduling."""
+
+
+# Host Mock Classes for Testing
+class MockBaseHost:
+    """Mock base host implementation for testing."""
+
+    def __init__(self) -> None:
+        self._cache_manager = MockCacheManager()
+        self._state_manager = MockStateManager()
+        self._data_storage = MockDataStorage()
+        self._logger = MockLogger()
+        self._configuration: Configuration | None = None
+
+    @property
+    def cache(self) -> CacheManager:
+        """Mock cache manager."""
+        return self._cache_manager
+
+    @property
+    def data_storage(self) -> DataStorage:
+        """Mock data storage."""
+        return self._data_storage
+
+    @property
+    def logger(self) -> MockLogger:
+        """Mock logger."""
+        return self._logger
+
+    @property
+    def configuration(self) -> Configuration:
+        """Mock configuration."""
+        if self._configuration is None:
+            from tests.fixtures import MockConfiguration
+
+            self._configuration = MockConfiguration({})
+        return self._configuration
+
+    @property
+    def state(self) -> StateManager:
+        """Mock state manager."""
+        return self._state_manager
+
+
+class MockContentExtractorHost(MockBaseHost):
+    """Mock content extractor host for testing."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.extracted_content: list[tuple[Content, Metadata]] = []
+        # Override the storage to track extracted content
+        self._data_storage = MockContentExtractorStorage(self)
+
+    @property
+    def storage(self) -> MockDataStorage:
+        """Mock data storage with call tracking."""
+        return self._data_storage
+
+    def store_extracted_content(self, content: Content, metadata: Metadata) -> None:
+        """Store extracted content."""
+        self.extracted_content.append((content, metadata))
+
+    def extract_file(self, content: Content, metadata: Metadata) -> None:
+        """Request extraction of nested content."""
+        self.store_extracted_content(content, metadata)
+
+    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+        """Schedule a URL for fetching."""
+        # For testing, we don't need to actually schedule anything
+        return
+
+
+class MockContentExtractorStorage(MockDataStorage):
+    """Storage that tracks extracted content for testing."""
+
+    def __init__(self, host: MockContentExtractorHost) -> None:
+        super().__init__()
+        self.host = host
+
+    async def add_item(self, host: Any, content: Content, metadata: Metadata) -> str:
+        """Add an item and track it in the host."""
+        # Store in the host for test verification
+        self.host.store_extracted_content(content, metadata)
+        # Also store in the mock storage
+        return await super().add_item(host, content, metadata)
+
+
+class MockContentSourceHost(MockBaseHost):
+    """Mock content source host for testing."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.scheduled_urls: list[tuple[str, Metadata | None]] = []
+
+    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+        """Schedule a URL for fetching."""
+        self.scheduled_urls.append((url, metadata))
+
+    def schedule_next_run(self, time_interval: timedelta) -> None:
+        """Schedule the next run of the content source."""
+        # For testing, we don't need to actually schedule anything
+        return
+
+
+class MockContentFetcherHost(MockBaseHost):
+    """Mock content fetcher host for testing."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.fetched_content: list[tuple[str, Content, Metadata]] = []
+        self._current_url: str | None = None
+
+    def store_fetched_content(
+        self, url: str, content: Content, metadata: Metadata
+    ) -> None:
+        """Store fetched content."""
+        self.fetched_content.append((url, content, metadata))
+
+    def extract_file(self, content: Content, metadata: Metadata) -> None:
+        """Request extraction of fetched content."""
+        # Use the original URL from metadata instead of hardcoded "extracted"
+        url = metadata.source_url if metadata else "unknown"
+        self.store_fetched_content(url, content, metadata)
+
+    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+        """Schedule a URL for fetching."""
+        # For testing, we don't need to actually schedule anything
+        return
+
+
+class MockLifecycleHost(MockBaseHost):
+    """Mock lifecycle host for testing."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.lifecycle_events: list[str] = []
+
+    def log_lifecycle_event(self, event: str) -> None:
+        """Log a lifecycle event."""
+        self.lifecycle_events.append(event)
+
+    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+        """Schedule a URL for fetching."""
+        # For testing, we don't need to actually schedule anything
+        return
 
 
 # Plugin registration functions using @hookimpl

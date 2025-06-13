@@ -13,6 +13,7 @@ if TYPE_CHECKING:
         Configuration,
         DataStorage,
         JobQueue,
+        Logger,
         StateStorage,
     )
     from paise2.plugins.core.registry import PluginManager
@@ -53,7 +54,7 @@ class Singletons:
 
     def __init__(  # noqa: PLR0913
         self,
-        logger: Any,
+        logger: Logger,
         configuration: Configuration,
         state_storage: StateStorage,
         job_queue: JobQueue,

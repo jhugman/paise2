@@ -877,7 +877,7 @@ class BaseHost(Protocol):
     """
 
     @property
-    def logger(self) -> Any:  # Will be Logger when implemented
+    def logger(self) -> Logger:  # Will be Logger when implemented
         """
         System logger for plugin use.
 
@@ -1032,3 +1032,12 @@ class LifecycleHost(BaseHost, Protocol):
 
     Provides lifecycle actions with basic host functionality.
     """
+
+
+class Logger(Protocol):
+    """Protocol for logger implementations."""
+
+    def debug(self, message: str) -> None: ...
+    def info(self, message: str) -> None: ...
+    def warning(self, message: str) -> None: ...
+    def error(self, message: str) -> None: ...

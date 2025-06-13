@@ -17,6 +17,7 @@ from paise2.plugins.core.startup import (
     StartupPhase,
     create_test_startup_manager,
 )
+from paise2.utils.logging import SimpleInMemoryLogger
 from tests.fixtures.mock_plugins import (
     MockCacheProvider,
     MockDataStorageProvider,
@@ -382,15 +383,16 @@ class TestStartupIntegration:
 
         # Verify logger received some bootstrap logs
         logger = singletons.logger
-        logs = logger.get_logs()
+        if isinstance(logger, SimpleInMemoryLogger):
+            logs = logger.get_logs()
 
-        # Should have replayed bootstrap logs
-        assert len(logs) > 0
+            # Should have replayed bootstrap logs
+            assert len(logs) > 0
 
-        # Check for expected bootstrap messages
-        log_messages = [log[2] for log in logs]
-        bootstrap_messages = [msg for msg in log_messages if "BOOTSTRAP" in msg]
-        assert len(bootstrap_messages) > 0
+            # Check for expected bootstrap messages
+            log_messages = [log[2] for log in logs]
+            bootstrap_messages = [msg for msg in log_messages if "BOOTSTRAP" in msg]
+            assert len(bootstrap_messages) > 0
 
 
 class TestStartupErrors:

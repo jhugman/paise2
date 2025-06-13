@@ -8,18 +8,27 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from paise2.config.models import ConfigurationDict
 
+# Import test factories
+from tests.fixtures.factory import create_test_plugin_manager_with_mocks
+
 from .mock_plugins import (
+    MockBaseHost,
     MockCacheManager,
     MockCacheProvider,
     MockConfigurationProvider,
     MockContentExtractor,
+    MockContentExtractorHost,
     MockContentFetcher,
+    MockContentFetcherHost,
     MockContentSource,
+    MockContentSourceHost,
     MockDataStorage,
     MockDataStorageProvider,
     MockJobQueue,
     MockJobQueueProvider,
     MockLifecycleAction,
+    MockLifecycleHost,
+    MockLogger,
     MockStateManager,
     MockStateStorage,
     MockStateStorageProvider,
@@ -70,19 +79,26 @@ class MockConfiguration:
 
 
 __all__ = [
+    "MockBaseHost",
     "MockCacheManager",
     "MockCacheProvider",
     "MockConfiguration",
     "MockConfigurationProvider",
     "MockContentExtractor",
+    "MockContentExtractorHost",
     "MockContentFetcher",
+    "MockContentFetcherHost",
     "MockContentSource",
+    "MockContentSourceHost",
     "MockDataStorage",
     "MockDataStorageProvider",
     "MockJobQueue",
     "MockJobQueueProvider",
     "MockLifecycleAction",
+    "MockLifecycleHost",
+    "MockLogger",
     "MockStateManager",
     "MockStateStorage",
     "MockStateStorageProvider",
+    "create_test_plugin_manager_with_mocks",
 ]

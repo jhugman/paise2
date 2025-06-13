@@ -22,11 +22,12 @@ class PluginSystem:
     Provides the main entry point for the PAISE2 plugin system.
     """
 
-    def __init__(self) -> None:
-        """Initialize the PluginSystem with default state."""
+    def __init__(self, plugin_manager: PluginManager | None = None) -> None:
+        """Initialize the PluginSystem with optional plugin manager."""
         self._startup_manager: StartupManager | None = None
         self._singletons: Singletons | None = None
         self._is_running = False
+        self._plugin_manager = plugin_manager
 
     def bootstrap(self) -> None:
         """
@@ -38,7 +39,11 @@ class PluginSystem:
         if self._startup_manager is not None:
             return  # Already bootstrapped
 
-        plugin_manager = create_development_plugin_manager()
+        plugin_manager = (
+            self._plugin_manager
+            if self._plugin_manager is not None
+            else create_development_plugin_manager()
+        )
         self._startup_manager = StartupManager(plugin_manager)
 
     def start(self, user_config_dict: dict[str, Any] | None = None) -> None:
@@ -62,6 +67,38 @@ class PluginSystem:
             # Run the complete startup sequence (async)
             self._singletons = asyncio.run(
                 self._startup_manager.execute_startup(user_config_dict)
+            )
+            self._is_running = True
+        except Exception:
+            # Ensure clean state on startup failure
+            self._singletons = None
+            self._is_running = False
+            raise
+
+    async def start_async(self, user_config_dict: dict[str, Any] | None = None) -> None:
+        """
+        Start the plugin system asynchronously by running the complete startup sequence.
+
+        This method should be used when calling from an async context to avoid
+        the "asyncio.run() cannot be called from a running event loop" error.
+
+        Args:
+            user_config_dict: Optional user configuration overrides.
+
+        Raises:
+            RuntimeError: If bootstrap() has not been called first.
+        """
+        if self._startup_manager is None:
+            msg = "Must call bootstrap() before start_async()"
+            raise RuntimeError(msg)
+
+        if self._is_running:
+            return  # Already running
+
+        try:
+            # Run the complete startup sequence (async)
+            self._singletons = await self._startup_manager.execute_startup(
+                user_config_dict
             )
             self._is_running = True
         except Exception:

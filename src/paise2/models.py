@@ -18,9 +18,6 @@ CacheId = str
 # Content type alias
 Content = Union[bytes, str]
 
-# Type aliases for other system components (to be defined by implementations)
-Logger = Any
-
 
 @dataclass(frozen=True)
 class Metadata:
