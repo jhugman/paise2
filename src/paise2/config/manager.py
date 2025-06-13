@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 if TYPE_CHECKING:
+    from paise2.plugins.core.interfaces import Configuration, StateStorage
+
     from .models import ConfigurationDict
 
 __all__ = ["ConfigurationManager"]
@@ -195,3 +197,74 @@ class ConfigurationManager:
         if isinstance(value, list):
             return [self._deep_copy_value(item) for item in value]
         return value
+
+    def create_configuration_with_diffing(
+        self,
+        current_config: ConfigurationDict,
+        state_storage: StateStorage,
+    ) -> Configuration:
+        """
+        Create configuration with startup diffing support.
+
+        Compares current configuration against previous run's configuration
+        and creates an annotated configuration with diff information.
+
+        Args:
+            current_config: Current merged configuration
+            state_storage: State storage for retrieving/storing previous config
+
+        Returns:
+            Configuration instance with diff information
+        """
+        from .diffing import ConcreteConfiguration, ConfigurationDiffer
+
+        # Load previous configuration from state storage
+        previous_config = self._load_previous_configuration(state_storage)
+
+        # Calculate diff between previous and current
+        diff = None
+        if previous_config:
+            diff = ConfigurationDiffer.calculate_diff(previous_config, current_config)
+
+        # Save current configuration for next startup
+        self._save_current_configuration(state_storage, current_config)
+
+        # Create configuration with diff annotation
+        return ConcreteConfiguration(current_config, diff)
+
+    def _load_previous_configuration(
+        self, state_storage: StateStorage
+    ) -> ConfigurationDict | None:
+        """
+        Load the previous configuration from state storage.
+
+        Args:
+            state_storage: State storage instance
+
+        Returns:
+            Previous configuration dictionary or None if not found
+        """
+        system_partition = "_system.configuration"
+        config_key = "last_merged"
+
+        config = state_storage.get(system_partition, config_key)
+        if config and isinstance(config, dict):
+            return config  # type: ignore[no-any-return]
+
+        return None
+
+    def _save_current_configuration(
+        self, state_storage: StateStorage, config: ConfigurationDict
+    ) -> None:
+        """
+        Save the current configuration to state storage for next startup.
+
+        Args:
+            state_storage: State storage instance
+            config: Current configuration to save
+        """
+        system_partition = "_system.configuration"
+        config_key = "last_merged"
+
+        # Store configuration directly (state storage should handle serialization)
+        state_storage.store(system_partition, config_key, config, version=1)
