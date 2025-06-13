@@ -3,10 +3,22 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from unittest.mock import Mock
 
+from paise2.models import Metadata
 from paise2.plugins.core.hosts import BaseHost, create_base_host, create_state_manager
-from paise2.plugins.core.interfaces import StateManager, StateStorage
+from paise2.plugins.core.interfaces import (
+    CacheManager,
+    ContentExtractorHost,
+    ContentFetcherHost,
+    ContentSourceHost,
+    DataStorage,
+    DataStorageHost,
+    LifecycleHost,
+    StateManager,
+    StateStorage,
+)
 from paise2.utils.logging import SimpleInMemoryLogger
 from tests.fixtures import MockConfiguration
 
@@ -276,3 +288,328 @@ class TestStateManagerImplementation:
 
         mock_storage.get.assert_called_once_with("test.module", "key", "default")
         assert result == "retrieved"
+
+
+class TestSpecializedHosts:
+    """Test specialized host implementations."""
+
+    def setup_method(self) -> None:
+        """Set up common test fixtures."""
+        self.mock_logger = SimpleInMemoryLogger()
+        self.mock_configuration = MockConfiguration({"test": "config"})
+        self.mock_state_storage = Mock(spec=StateStorage)
+        self.mock_cache = Mock(spec=CacheManager)
+        self.mock_data_storage = Mock(spec=DataStorage)
+        self.plugin_module_name = "paise2.plugins.test_plugin"
+
+    def test_content_extractor_host_creation(self) -> None:
+        """Test ContentExtractorHost creation with storage and cache access."""
+        from paise2.plugins.core.hosts import (
+            ContentExtractorHost as ConcreteContentExtractorHost,
+        )
+
+        host = ConcreteContentExtractorHost(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+            data_storage=self.mock_data_storage,
+            cache=self.mock_cache,
+        )
+
+        # Verify it implements the ContentExtractorHost protocol
+        assert isinstance(host, ContentExtractorHost)
+        assert host.logger is self.mock_logger
+        assert host.configuration is self.mock_configuration
+        assert host.storage is self.mock_data_storage
+        assert host.cache is self.mock_cache
+        assert hasattr(host, "extract_file")
+
+    def test_content_extractor_host_extract_file_method(self) -> None:
+        """Test ContentExtractorHost extract_file method functionality."""
+        from paise2.plugins.core.hosts import (
+            ContentExtractorHost as ConcreteContentExtractorHost,
+        )
+
+        host = ConcreteContentExtractorHost(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+            data_storage=self.mock_data_storage,
+            cache=self.mock_cache,
+        )
+
+        # Test extract_file method
+        test_content = "test content"
+        test_metadata = Metadata(
+            source_url="http://example.com", mime_type="text/plain"
+        )
+
+        # For now, this should not raise an error (placeholder implementation)
+        host.extract_file(test_content, test_metadata)
+
+    def test_content_source_host_creation(self) -> None:
+        """Test ContentSourceHost creation with cache access and scheduling."""
+        from paise2.plugins.core.hosts import (
+            ContentSourceHost as ConcreteContentSourceHost,
+        )
+
+        host = ConcreteContentSourceHost(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+            cache=self.mock_cache,
+        )
+
+        # Verify it implements the ContentSourceHost protocol
+        assert isinstance(host, ContentSourceHost)
+        assert host.logger is self.mock_logger
+        assert host.configuration is self.mock_configuration
+        assert host.cache is self.mock_cache
+        assert hasattr(host, "schedule_next_run")
+
+    def test_content_source_host_schedule_next_run_method(self) -> None:
+        """Test ContentSourceHost schedule_next_run method functionality."""
+        from paise2.plugins.core.hosts import (
+            ContentSourceHost as ConcreteContentSourceHost,
+        )
+
+        host = ConcreteContentSourceHost(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+            cache=self.mock_cache,
+        )
+
+        # Test schedule_next_run method
+        time_interval = timedelta(minutes=30)
+
+        # For now, this should not raise an error (placeholder implementation)
+        host.schedule_next_run(time_interval)
+
+    def test_content_fetcher_host_creation(self) -> None:
+        """Test ContentFetcherHost creation with cache access and extraction."""
+        from paise2.plugins.core.hosts import (
+            ContentFetcherHost as ConcreteContentFetcherHost,
+        )
+
+        host = ConcreteContentFetcherHost(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+            cache=self.mock_cache,
+        )
+
+        # Verify it implements the ContentFetcherHost protocol
+        assert isinstance(host, ContentFetcherHost)
+        assert host.logger is self.mock_logger
+        assert host.configuration is self.mock_configuration
+        assert host.cache is self.mock_cache
+        assert hasattr(host, "extract_file")
+
+    def test_content_fetcher_host_extract_file_method(self) -> None:
+        """Test ContentFetcherHost extract_file method functionality."""
+        from paise2.plugins.core.hosts import (
+            ContentFetcherHost as ConcreteContentFetcherHost,
+        )
+
+        host = ConcreteContentFetcherHost(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+            cache=self.mock_cache,
+        )
+
+        # Test extract_file method
+        test_content = b"binary content"
+        test_metadata = Metadata(
+            source_url="http://example.com/file.pdf", mime_type="application/pdf"
+        )
+
+        # For now, this should not raise an error (placeholder implementation)
+        host.extract_file(test_content, test_metadata)
+
+    def test_data_storage_host_creation(self) -> None:
+        """Test DataStorageHost creation with basic host functionality."""
+        from paise2.plugins.core.hosts import DataStorageHost as ConcreteDataStorageHost
+
+        host = ConcreteDataStorageHost(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+        )
+
+        # Verify it implements the DataStorageHost protocol
+        assert isinstance(host, DataStorageHost)
+        assert host.logger is self.mock_logger
+        assert host.configuration is self.mock_configuration
+
+    def test_lifecycle_host_creation(self) -> None:
+        """Test LifecycleHost creation with basic host functionality."""
+        from paise2.plugins.core.hosts import LifecycleHost as ConcreteLifecycleHost
+
+        host = ConcreteLifecycleHost(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+        )
+
+        # Verify it implements the LifecycleHost protocol
+        assert isinstance(host, LifecycleHost)
+        assert host.logger is self.mock_logger
+        assert host.configuration is self.mock_configuration
+
+
+class TestHostFactoriesSpecialized:
+    """Test specialized host factory functions."""
+
+    def setup_method(self) -> None:
+        """Set up common test fixtures."""
+        self.mock_logger = SimpleInMemoryLogger()
+        self.mock_configuration = MockConfiguration({"test": "config"})
+        self.mock_state_storage = Mock(spec=StateStorage)
+        self.mock_cache = Mock(spec=CacheManager)
+        self.mock_data_storage = Mock(spec=DataStorage)
+        self.plugin_module_name = "paise2.plugins.test_plugin"
+
+    def test_create_content_extractor_host_factory(self) -> None:
+        """Test ContentExtractorHost creation through factory function."""
+        from paise2.plugins.core.hosts import create_content_extractor_host
+
+        host = create_content_extractor_host(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+            data_storage=self.mock_data_storage,
+            cache=self.mock_cache,
+        )
+
+        assert isinstance(host, ContentExtractorHost)
+        assert host.storage is self.mock_data_storage
+        assert host.cache is self.mock_cache
+
+    def test_create_content_source_host_factory(self) -> None:
+        """Test ContentSourceHost creation through factory function."""
+        from paise2.plugins.core.hosts import create_content_source_host
+
+        host = create_content_source_host(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+            cache=self.mock_cache,
+        )
+
+        assert isinstance(host, ContentSourceHost)
+        assert host.cache is self.mock_cache
+
+    def test_create_content_fetcher_host_factory(self) -> None:
+        """Test ContentFetcherHost creation through factory function."""
+        from paise2.plugins.core.hosts import create_content_fetcher_host
+
+        host = create_content_fetcher_host(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+            cache=self.mock_cache,
+        )
+
+        assert isinstance(host, ContentFetcherHost)
+        assert host.cache is self.mock_cache
+
+    def test_create_data_storage_host_factory(self) -> None:
+        """Test DataStorageHost creation through factory function."""
+        from paise2.plugins.core.hosts import create_data_storage_host
+
+        host = create_data_storage_host(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+        )
+
+        assert isinstance(host, DataStorageHost)
+
+    def test_create_lifecycle_host_factory(self) -> None:
+        """Test LifecycleHost creation through factory function."""
+        from paise2.plugins.core.hosts import create_lifecycle_host
+
+        host = create_lifecycle_host(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+        )
+
+        assert isinstance(host, LifecycleHost)
+
+
+class TestJobSchedulingIntegration:
+    """Test job scheduling integration in specialized hosts."""
+
+    def setup_method(self) -> None:
+        """Set up test fixtures with job queue."""
+        self.mock_logger = SimpleInMemoryLogger()
+        self.mock_configuration = MockConfiguration({"test": "config"})
+        self.mock_state_storage = Mock(spec=StateStorage)
+        self.mock_cache = Mock(spec=CacheManager)
+        self.mock_data_storage = Mock(spec=DataStorage)
+        self.mock_job_queue = Mock()
+        self.plugin_module_name = "paise2.plugins.test_plugin"
+
+    def test_base_host_schedule_fetch_with_job_queue(self) -> None:
+        """Test BaseHost schedule_fetch method with job queue integration."""
+        from paise2.plugins.core.hosts import BaseHostWithJobQueue
+
+        host = BaseHostWithJobQueue(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+            job_queue=self.mock_job_queue,
+        )
+
+        test_url = "http://example.com/file.txt"
+        test_metadata = Metadata(source_url=test_url, mime_type="text/plain")
+
+        # Test schedule_fetch method
+        host.schedule_fetch(test_url, test_metadata)
+
+        # For now, verify job queue is not called since it's a placeholder
+        # Job queue integration will be implemented in later prompts
+        self.mock_job_queue.enqueue.assert_not_called()
+
+    def test_content_extractor_host_extract_file_with_job_queue(self) -> None:
+        """Test ContentExtractorHost extract_file method with job queue integration."""
+        from paise2.plugins.core.hosts import ContentExtractorHostWithJobQueue
+
+        host = ContentExtractorHostWithJobQueue(
+            logger=self.mock_logger,
+            configuration=self.mock_configuration,
+            state_storage=self.mock_state_storage,
+            plugin_module_name=self.plugin_module_name,
+            data_storage=self.mock_data_storage,
+            cache=self.mock_cache,
+            job_queue=self.mock_job_queue,
+        )
+
+        test_content = "nested content"
+        test_metadata = Metadata(
+            source_url="http://example.com/nested.html", mime_type="text/html"
+        )
+
+        # Test extract_file method (for recursive extraction)
+        host.extract_file(test_content, test_metadata)
+
+        # For now, verify job queue is not called since it's a placeholder
+        # Job queue integration will be implemented in later prompts
+        self.mock_job_queue.enqueue.assert_not_called()

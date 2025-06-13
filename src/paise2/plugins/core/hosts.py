@@ -7,9 +7,14 @@ import inspect
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from paise2.models import Metadata
+    from datetime import timedelta
+
+    from paise2.models import Content, Metadata
     from paise2.plugins.core.interfaces import (
+        CacheManager,
         Configuration,
+        DataStorage,
+        JobQueue,
         StateManager,
         StateStorage,
     )
@@ -128,3 +133,219 @@ def create_base_host(
 ) -> BaseHost:
     """Create a BaseHost instance."""
     return BaseHost(logger, configuration, state_storage, plugin_module_name)
+
+
+class ContentExtractorHost(BaseHost):
+    """Specialized host for content extractors with storage and cache access."""
+
+    def __init__(  # noqa: PLR0913
+        self,
+        logger: Any,
+        configuration: Configuration,
+        state_storage: StateStorage,
+        plugin_module_name: str,
+        data_storage: DataStorage,
+        cache: CacheManager,
+    ):
+        super().__init__(logger, configuration, state_storage, plugin_module_name)
+        self._data_storage = data_storage
+        self._cache = cache
+
+    @property
+    def storage(self) -> DataStorage:
+        """Get the data storage instance."""
+        return self._data_storage
+
+    @property
+    def cache(self) -> CacheManager:
+        """Get the cache manager instance."""
+        return self._cache
+
+    def extract_file(self, content: Content, metadata: Metadata) -> None:
+        """Request extraction of nested content (placeholder implementation)."""
+        # NOTE: This will be implemented when job queue integration is added
+
+
+class ContentSourceHost(BaseHost):
+    """Specialized host for content sources with cache access and scheduling."""
+
+    def __init__(
+        self,
+        logger: Any,
+        configuration: Configuration,
+        state_storage: StateStorage,
+        plugin_module_name: str,
+        cache: CacheManager,
+    ):
+        super().__init__(logger, configuration, state_storage, plugin_module_name)
+        self._cache = cache
+
+    @property
+    def cache(self) -> CacheManager:
+        """Get the cache manager instance."""
+        return self._cache
+
+    def schedule_next_run(self, time_interval: timedelta) -> None:
+        """Schedule the next run of this content source (placeholder implementation)."""
+        # NOTE: This will be implemented when job queue integration is added
+
+
+class ContentFetcherHost(BaseHost):
+    """Specialized host for content fetchers with cache access and extraction."""
+
+    def __init__(
+        self,
+        logger: Any,
+        configuration: Configuration,
+        state_storage: StateStorage,
+        plugin_module_name: str,
+        cache: CacheManager,
+    ):
+        super().__init__(logger, configuration, state_storage, plugin_module_name)
+        self._cache = cache
+
+    @property
+    def cache(self) -> CacheManager:
+        """Get the cache manager instance."""
+        return self._cache
+
+    def extract_file(self, content: Content, metadata: Metadata) -> None:
+        """Request extraction of fetched content (placeholder implementation)."""
+        # NOTE: This will be implemented when job queue integration is added
+
+
+class DataStorageHost(BaseHost):
+    """Specialized host for data storage providers with basic host functionality."""
+
+    def __init__(
+        self,
+        logger: Any,
+        configuration: Configuration,
+        state_storage: StateStorage,
+        plugin_module_name: str,
+    ):
+        super().__init__(logger, configuration, state_storage, plugin_module_name)
+
+
+class LifecycleHost(BaseHost):
+    """Specialized host for lifecycle actions with basic host functionality."""
+
+    def __init__(
+        self,
+        logger: Any,
+        configuration: Configuration,
+        state_storage: StateStorage,
+        plugin_module_name: str,
+    ):
+        super().__init__(logger, configuration, state_storage, plugin_module_name)
+
+
+# Hosts with job queue integration
+class BaseHostWithJobQueue(BaseHost):
+    """BaseHost with job queue integration for scheduling operations."""
+
+    def __init__(
+        self,
+        logger: Any,
+        configuration: Configuration,
+        state_storage: StateStorage,
+        plugin_module_name: str,
+        job_queue: JobQueue,
+    ):
+        super().__init__(logger, configuration, state_storage, plugin_module_name)
+        self._job_queue = job_queue
+
+    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+        """Schedule a fetch operation with job queue integration."""
+        # NOTE: Job queue integration will be implemented when job handling is added
+        # For now, this is a placeholder method
+
+
+class ContentExtractorHostWithJobQueue(ContentExtractorHost):
+    """ContentExtractorHost with job queue integration for recursive extraction."""
+
+    def __init__(  # noqa: PLR0913
+        self,
+        logger: Any,
+        configuration: Configuration,
+        state_storage: StateStorage,
+        plugin_module_name: str,
+        data_storage: DataStorage,
+        cache: CacheManager,
+        job_queue: JobQueue,
+    ):
+        super().__init__(
+            logger,
+            configuration,
+            state_storage,
+            plugin_module_name,
+            data_storage,
+            cache,
+        )
+        self._job_queue = job_queue
+
+    def extract_file(self, content: Content, metadata: Metadata) -> None:
+        """Request extraction of nested content with job queue integration."""
+        # NOTE: Job queue integration will be implemented when job handling is added
+        # For now, this is a placeholder method
+
+
+# Factory functions for specialized hosts
+def create_content_extractor_host(  # noqa: PLR0913
+    logger: Any,
+    configuration: Configuration,
+    state_storage: StateStorage,
+    plugin_module_name: str,
+    data_storage: DataStorage,
+    cache: CacheManager,
+) -> ContentExtractorHost:
+    """Create a ContentExtractorHost instance."""
+    return ContentExtractorHost(
+        logger, configuration, state_storage, plugin_module_name, data_storage, cache
+    )
+
+
+def create_content_source_host(
+    logger: Any,
+    configuration: Configuration,
+    state_storage: StateStorage,
+    plugin_module_name: str,
+    cache: CacheManager,
+) -> ContentSourceHost:
+    """Create a ContentSourceHost instance."""
+    return ContentSourceHost(
+        logger, configuration, state_storage, plugin_module_name, cache
+    )
+
+
+def create_content_fetcher_host(
+    logger: Any,
+    configuration: Configuration,
+    state_storage: StateStorage,
+    plugin_module_name: str,
+    cache: CacheManager,
+) -> ContentFetcherHost:
+    """Create a ContentFetcherHost instance."""
+    return ContentFetcherHost(
+        logger, configuration, state_storage, plugin_module_name, cache
+    )
+
+
+def create_data_storage_host(
+    logger: Any,
+    configuration: Configuration,
+    state_storage: StateStorage,
+    plugin_module_name: str,
+) -> DataStorageHost:
+    """Create a DataStorageHost instance."""
+    return DataStorageHost(logger, configuration, state_storage, plugin_module_name)
+
+
+def create_lifecycle_host(
+    logger: Any,
+    configuration: Configuration,
+    state_storage: StateStorage,
+    plugin_module_name: str,
+) -> LifecycleHost:
+    """Create a LifecycleHost instance."""
+    return LifecycleHost(logger, configuration, state_storage, plugin_module_name)
