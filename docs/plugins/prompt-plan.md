@@ -1007,7 +1007,76 @@ Focus on:
 
 ---
 
-## PROMPT 18: Content Fetching Pipeline
+## PROMPT 18: Job Processing Integration
+
+### Context
+Implement the job processing system that handles content pipeline jobs asynchronously and integrates with the plugin system.
+
+### Task
+```
+Create the job processing system that handles content pipeline jobs asynchronously and integrates with the plugin system, implementing the enhanced JobExecutor and JobHandler design.
+
+Requirements:
+1. Implement JobResult dataclass and JobHandler Protocol:
+   - JobResult for structured job execution results
+   - JobHandler Protocol with job_types property
+   - Registration mechanism for job handlers
+2. Create JobExecutor implementation:
+   - Job routing to appropriate handlers
+   - Handler registration and management
+   - Error handling and retry logic
+3. Implement standard job handlers:
+   - fetch_content job handler (integrates with content fetchers)
+   - extract_content job handler (integrates with content extractors)
+   - store_content job handler
+   - cleanup_cache job handler
+4. Add plugin integration for job handlers:
+   - Job handler extension point
+   - Plugin-contributed job handlers
+   - Registration hooks
+5. Create job processing coordination:
+   - Worker lifecycle management
+   - Proper singleton access in workers
+   - State management in job processing
+6. Add comprehensive tests:
+   - Job handler registration and routing
+   - Job processing workflow
+   - Error handling and retries
+   - Plugin integration in workers
+   - Performance and concurrency
+7. Add job monitoring and observability
+8. Include graceful shutdown for workers
+
+Focus on:
+- JobHandler plugin integration
+- Job routing through the JobExecutor
+- Asynchronous job processing integration
+- Robust error handling and retry logic
+- Job processing performance and scalability
+- Comprehensive testing of async workflows
+```
+
+### Task List
+- [ ] Create JobResult dataclass for structured job execution results
+- [ ] Implement JobHandler Protocol with job_types property
+- [ ] Create JobExecutor implementation with handler registration and routing
+- [ ] Implement fetch_content job handler with content fetcher integration
+- [ ] Add extract_content job handler with content extractor integration
+- [ ] Create store_content and cleanup_cache job handlers
+- [ ] Add job handler extension point for plugins
+- [ ] Implement plugin-contributed job handler registration hooks
+- [ ] Add job processing coordination and routing logic
+- [ ] Implement worker lifecycle management with graceful shutdown
+- [ ] Add comprehensive error handling and retry logic for job processing
+- [ ] Create integration between job workers and plugin hosts
+- [ ] Add comprehensive tests for job handler registration
+- [ ] Create tests for job processing workflows
+- [ ] Test error handling, retries, and performance characteristics
+- [ ] PROMPT 18 COMPLETE
+
+---
+
+## PROMPT 19: Content Fetching Pipeline
 
 ### Context
 Implement the ContentFetcher extension point that transforms URLs and paths into content for extraction.
@@ -1025,14 +1094,13 @@ Requirements:
    - extract_file() method for content processing
    - Cache integration for fetched content
    - Metadata enrichment during fetch
-3. Add fetcher selection logic:
+3. Add fetcher selection logic in a ContentFetcherJobHandler:
    - can_fetch() evaluation and prioritization
    - First-match-wins with proper ordering
    - Fallback to general fetchers
 4. Create comprehensive tests:
    - Fetcher selection and prioritization
    - Content retrieval and caching
-   - Error handling and retry logic
    - Cache integration
 5. Add example ContentFetcher implementations
 6. Include job processing integration
@@ -1056,11 +1124,11 @@ Focus on:
 - [ ] Create comprehensive tests for fetcher selection and prioritization
 - [ ] Test content retrieval, caching, and error handling
 - [ ] Verify job processing integration works correctly
-- [ ] PROMPT 18 COMPLETE
+- [ ] PROMPT 19 COMPLETE
 
 ---
 
-## PROMPT 19: Content Extraction Pipeline
+## PROMPT 20: Content Extraction Pipeline
 
 ### Context
 Implement the ContentExtractor extension point that processes fetched content and stores it in the system.
@@ -1078,7 +1146,7 @@ Requirements:
    - Storage integration for processed content
    - Cache management for extracted content
    - Recursive extraction support (extract_file calls)
-3. Add extractor selection logic:
+3. Add extractor selection logic in a ContentExtractorJobHandler:
    - can_extract() evaluation with MIME types
    - preferred_mime_types() prioritization
    - Fallback extraction strategies
@@ -1109,60 +1177,6 @@ Focus on:
 - [ ] Create comprehensive tests for extractor selection and processing
 - [ ] Test recursive extraction scenarios (ZIP files, etc.)
 - [ ] Verify storage and cache integration works correctly
-- [ ] PROMPT 19 COMPLETE
-
----
-
-## PROMPT 20: Job Processing Integration
-
-### Context
-Integrate the job processing system with the content pipeline to enable asynchronous processing of fetch and extract operations.
-
-### Task
-```
-Create the job processing workers that handle the content pipeline jobs asynchronously and integrate with the plugin system.
-
-Requirements:
-1. Implement job processing workers:
-   - fetch_content job handler
-   - extract_content job handler
-   - store_content job handler
-   - cleanup_cache job handler
-2. Create job processing coordination:
-   - Worker lifecycle management
-   - Job routing to appropriate plugins
-   - Error handling and retry logic
-3. Add job processing integration:
-   - Integration with plugin hosts
-   - Proper singleton access in workers
-   - State management in job processing
-4. Create comprehensive tests:
-   - Job processing workflow
-   - Error handling and retries
-   - Plugin integration in workers
-   - Performance and concurrency
-5. Add job monitoring and observability
-6. Include graceful shutdown for workers
-
-Focus on:
-- Asynchronous job processing integration
-- Robust error handling and retry logic
-- Proper plugin integration in workers
-- Job processing performance and scalability
-- Comprehensive testing of async workflows
-```
-
-### Task List
-- [ ] Create job processing workers for each job type
-- [ ] Implement fetch_content job handler with fetcher integration
-- [ ] Add extract_content job handler with extractor integration
-- [ ] Create store_content and cleanup_cache job handlers
-- [ ] Add job processing coordination and routing logic
-- [ ] Implement worker lifecycle management with graceful shutdown
-- [ ] Add comprehensive error handling and retry logic for job processing
-- [ ] Create integration between job workers and plugin hosts
-- [ ] Add comprehensive tests for job processing workflows
-- [ ] Test error handling, retries, and performance characteristics
 - [ ] PROMPT 20 COMPLETE
 
 ---

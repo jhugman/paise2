@@ -198,6 +198,65 @@ Job queues must support storing and retrieving binary data (bytes) in `job_data`
 **JobExecutor Architecture:**
 Job queue providers can optionally accept a `JobExecutor` for separating job storage from execution logic. Synchronous queues require a `JobExecutor` for immediate execution, while persistent queues use external workers and ignore the executor parameter. This enables flexible deployment patterns from development (immediate execution) to production (worker-based processing).
 
+**JobExecutor Detailed Design:**
+The JobExecutor is responsible for routing jobs to appropriate handlers based on job type. It maintains a mapping between job types and their handlers, and delegates job execution to the registered handler for each job type.
+
+```python
+@dataclass(frozen=True)
+class JobResult:
+    # A structured representation of job execution results
+    # This class will evolve as implementation progresses
+    status: str  # "success", "failure", "partial_success"
+    error: Optional[str] = None
+    # Additional fields will be added as needed for specific job types
+
+class JobHandler(Protocol):
+    @property
+    def job_types(self) -> List[str]:
+        """Return a list of job types this handler can process."""
+        ...
+
+    async def handle_job(self, job: Job) -> JobResult:
+        """Handle the execution of a job and return structured results."""
+        ...
+
+class JobExecutor(Protocol):
+    def register_handler(self, handler: JobHandler) -> None:
+        """Register a handler for specific job types."""
+        ...
+
+    async def execute_job(self, job: Job) -> JobResult:
+        """Execute a job by routing it to the appropriate handler."""
+        ...
+
+    def get_registered_types(self) -> List[str]:
+        """Return a list of all registered job types."""
+        ...
+```
+
+**Plugin Integration:**
+Plugins can contribute JobHandlers through a dedicated extension point:
+
+```python
+class Plugin:
+    @hookimpl
+    def register_job_handler(self, register: Callable[[JobHandler], None]) -> None:
+        """Register job handlers provided by this plugin."""
+        ...
+```
+
+The JobExecutor is responsible for:
+1. Maintaining a mapping between job types and their handlers
+2. Routing jobs to the appropriate handler based on job type
+3. Providing a registration mechanism for handlers through the plugin system
+4. Handling execution control flow (errors, retries)
+
+Job handlers are responsible for:
+1. Declaring which job types they can handle
+2. Implementing the actual job processing logic
+3. Selecting appropriate fetchers, extractors, or other components needed for the job
+4. Returning structured results using the JobResult dataclass
+
 **Default Implementations Available:**
 
 ```python
@@ -658,7 +717,7 @@ def on_startup(self, host):
     diff = config.last_diff
 
     if diff and config.has_changed("my_plugin.extraction_rules"):
-        # Plugin's extraction rules changed, re-index existing content
+        # Plugin's extraction rules changed, re-indexing existing content
         logger.info("Extraction rules changed, scheduling re-indexing")
         for item_id in host.state.get_all_keys_with_value("extracted"):
             host.schedule_job("re_extract", {"item_id": item_id})
@@ -969,7 +1028,7 @@ async def test_recursive_extraction():
     # Verify recursive extractions were scheduled
     assert len(test_host.scheduled_extractions) > 1
 
-# Test resumability
+# Test resumable operations
 async def test_resumable_operations():
     # Start processing
     plugin_system = create_test_plugin_system()
