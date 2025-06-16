@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from paise2.utils.logging import SimpleInMemoryLogger
 
@@ -26,7 +26,79 @@ __all__ = [
     "StartupError",
     "StartupManager",
     "StartupPhase",
+    "setup_tasks",
 ]
+
+
+def setup_tasks(huey: Huey | None, singletons: Singletons) -> dict[str, Callable]:
+    """
+    Define tasks with the provided Huey instance and singletons.
+
+    Implements the two-phase initialization pattern: first create TaskQueueProvider,
+    then create singletons, then setup tasks with both.
+
+    Args:
+        huey: Huey instance for task definition (may be None for sync execution)
+        singletons: System singletons for task implementation
+
+    Returns:
+        Dict mapping task names to task functions. Empty dict for sync execution.
+    """
+    if huey is None:
+        # No tasks for synchronous execution
+        return {}
+
+    @huey.task()  # type: ignore[misc]
+    def fetch_content_task(
+        url: str, metadata: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Fetch content using appropriate ContentFetcher plugin."""
+        # Placeholder implementation - will be enhanced in future prompts
+        # with actual ContentFetcher integration
+        _ = metadata  # Will be used in future implementation
+        singletons.logger.info("Fetch task scheduled")
+        return {"status": "success", "message": f"Fetched content from {url}"}
+
+    @huey.task()  # type: ignore[misc]
+    def extract_content_task(
+        content: bytes | str, metadata: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Extract content using appropriate ContentExtractor plugin."""
+        # Placeholder implementation - will be enhanced in future prompts
+        # with actual ContentExtractor integration
+        _ = content  # Will be used in future implementation
+        _ = metadata  # Will be used in future implementation
+        singletons.logger.info("Extract task scheduled")
+        return {"status": "success", "message": "Content extraction completed"}
+
+    @huey.task()  # type: ignore[misc]
+    def store_content_task(
+        content: dict[str, Any], metadata: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Store processed content in the data storage."""
+        # Placeholder implementation - will be enhanced in future prompts
+        # with actual DataStorage integration
+        _ = content  # Will be used in future implementation
+        _ = metadata  # Will be used in future implementation
+        singletons.logger.info("Store task scheduled for processed content")
+        return {"status": "success", "message": "Content stored successfully"}
+
+    @huey.task()  # type: ignore[misc]
+    def cleanup_cache_task(cache_ids: list[str]) -> dict[str, Any]:
+        """Clean up specified cache entries."""
+        # Placeholder implementation - will be enhanced in future prompts
+        # with actual cache cleanup integration
+        count = len(cache_ids)
+        singletons.logger.info("Cache cleanup task scheduled")
+        return {"status": "success", "message": f"Cleaned up {count} cache entries"}
+
+    return {
+        "fetch_content": fetch_content_task,
+        "extract_content": extract_content_task,
+        "store_content": store_content_task,
+        "cleanup_cache": cleanup_cache_task,
+    }
+
 
 # Error messages constants
 _SINGLETONS_NOT_CREATED = "Singletons not created during startup"
@@ -60,9 +132,10 @@ class Singletons:
         logger: Logger,
         configuration: Configuration,
         state_storage: StateStorage,
-        task_queue: Huey,
+        task_queue: Huey | None,
         cache: CacheManager,
         data_storage: DataStorage,
+        tasks: dict[str, Any] | None = None,
     ):
         self.logger = logger
         self.configuration = configuration
@@ -70,6 +143,7 @@ class Singletons:
         self.task_queue = task_queue
         self.cache = cache
         self.data_storage = data_storage
+        self.tasks = tasks or {}
 
 
 class StartupManager:
@@ -191,8 +265,8 @@ class StartupManager:
         logger = self._create_logger_singleton(final_configuration)
         self._replay_bootstrap_logs(logger)
 
-        # Create singletons container
-        self.singletons = Singletons(
+        # Create initial singletons container (without tasks)
+        initial_singletons = Singletons(
             logger=logger,
             configuration=final_configuration,
             state_storage=state_storage,
@@ -201,7 +275,19 @@ class StartupManager:
             data_storage=data_storage,
         )
 
-        self.bootstrap_logger.info("Phase 3: Singletons created")
+        # Step 6: Setup tasks and create final singletons container
+        tasks = setup_tasks(task_queue, initial_singletons)
+        self.singletons = Singletons(
+            logger=logger,
+            configuration=final_configuration,
+            state_storage=state_storage,
+            task_queue=task_queue,
+            cache=cache,
+            data_storage=data_storage,
+            tasks=tasks,
+        )
+
+        self.bootstrap_logger.info("Phase 3: Singletons created with task registry")
 
     async def _phase_4_singleton_using(self) -> None:
         """Phase 4: Load singleton-using extensions."""

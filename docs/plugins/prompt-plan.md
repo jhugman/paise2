@@ -1203,19 +1203,42 @@ Focus on:
 ```
 
 ### Task List
-- [ ] Create Singletons dataclass with all system components
-- [ ] Add task_queue field (Huey instance or None) to Singletons
-- [ ] Add tasks field (dict) to store task registry in Singletons
-- [ ] Implement setup_tasks function with Huey task definitions
-- [ ] Define fetch_content_task with proper Huey integration
-- [ ] Define extract_content_task with content processing
-- [ ] Define store_content_task for storage operations
-- [ ] Define cleanup_cache_task for cache management
-- [ ] Create application initialization with two-phase startup
-- [ ] Implement task registry creation and storage in singletons
-- [ ] Add comprehensive tests for task definition and singleton integration
-- [ ] Test both synchronous (None) and asynchronous (Huey) modes
-- [ ] PROMPT 18 COMPLETE
+- [x] Create Singletons dataclass with all system components
+- [x] Add task_queue field (Huey instance or None) to Singletons
+- [x] Add tasks field (dict) to store task registry in Singletons
+- [x] Implement setup_tasks function with Huey task definitions
+- [x] Define fetch_content_task with proper Huey integration
+- [x] Define extract_content_task with content processing
+- [x] Define store_content_task for storage operations
+- [x] Define cleanup_cache_task for cache management
+- [x] Create application initialization with two-phase startup
+- [x] Implement task registry creation and storage in singletons
+- [x] Add comprehensive tests for task definition and singleton integration
+- [x] Test both synchronous (None) and asynchronous (Huey) modes
+- [x] **PROMPT 18 COMPLETE** ✅
+
+**Final Status (June 17, 2025):**
+- ✅ All 383 tests passing (12 new tests for task definition and singletons)
+- ✅ Singletons dataclass enhanced with `tasks: dict[str, Any]` field
+- ✅ setup_tasks function implemented with proper two-phase initialization pattern
+- ✅ Four task definitions: fetch_content_task, extract_content_task, store_content_task, cleanup_cache_task
+- ✅ Tasks properly decorated with @huey.task() and include placeholder implementations
+- ✅ Application initialization updated to use setup_tasks and store registry in singletons
+- ✅ Comprehensive test coverage: TestSetupTasks, TestSingletonsWithTasks, TestTwoPhaseInitialization, TestTaskRegistryIntegration
+- ✅ Support for both synchronous (huey=None) and asynchronous (Huey) execution modes
+- ✅ Proper handling of Huey Result objects in tests with immediate=True
+- ✅ Task registry properly stored and accessible via singletons.tasks
+- ✅ Clean integration with existing startup sequence and singleton creation
+- ✅ All code quality checks passing: Ruff formatting, Ruff linting, MyPy type checking
+- ✅ Ready for PROMPT 19: ContentSource Implementation with Task Scheduling
+
+**Implementation Highlights:**
+- **Two-Phase Pattern**: TaskQueueProvider creates Huey → singletons created → setup_tasks creates registry → final singletons with tasks
+- **Task Registry**: Dict mapping task names to callable Huey task functions stored in singletons
+- **Flexible Execution**: Handles both sync (None) and async (Huey) execution modes seamlessly
+- **Placeholder Tasks**: All four core tasks implemented with proper signatures and logging
+- **Type Safety**: Proper typing throughout including Huey | None for optional task queue
+- **Test Coverage**: 12 comprehensive tests covering all aspects of task definition and integration
 - [ ] Create JobExecutor implementation with handler registration and routing
 - [ ] Implement fetch_content job handler with content fetcher integration
 - [ ] Add extract_content job handler with content extractor integration
