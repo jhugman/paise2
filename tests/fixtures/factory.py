@@ -33,9 +33,9 @@ def create_test_plugin_manager_with_mocks() -> PluginManager:
             MockContentFetcher,
             MockContentSource,
             MockDataStorageProvider,
-            MockJobQueueProvider,
             MockLifecycleAction,
             MockStateStorageProvider,
+            MockTaskQueueProvider,
         )
 
         # Register each mock plugin directly
@@ -45,7 +45,7 @@ def create_test_plugin_manager_with_mocks() -> PluginManager:
         plugin_manager.register_content_fetcher(MockContentFetcher())
         plugin_manager.register_lifecycle_action(MockLifecycleAction())
         plugin_manager.register_data_storage_provider(MockDataStorageProvider())
-        plugin_manager.register_job_queue_provider(MockJobQueueProvider())
+        plugin_manager.register_task_queue_provider(MockTaskQueueProvider())
         plugin_manager.register_state_storage_provider(MockStateStorageProvider())
         plugin_manager.register_cache_provider(MockCacheProvider())
 

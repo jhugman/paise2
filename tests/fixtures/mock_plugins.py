@@ -3,15 +3,17 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import pluggy
 
 from paise2.models import Content, Metadata
-from paise2.plugins.core.interfaces import Job
 
 if TYPE_CHECKING:
+    from datetime import timedelta
+
+    from huey import Huey
+
     from paise2.plugins.core.interfaces import (
         CacheManager,
         Configuration,
@@ -19,8 +21,6 @@ if TYPE_CHECKING:
         ContentFetcherHost,
         ContentSourceHost,
         DataStorage,
-        JobExecutor,
-        JobQueue,
         LifecycleHost,
         StateManager,
         StateStorage,
@@ -279,71 +279,23 @@ class MockDataStorage:
         return await self.remove_items_by_metadata(host, metadata)
 
 
-# Test Job Queue Provider
-class MockJobQueueProvider:
-    """Test job queue provider for plugin registration testing."""
+# Test Task Queue Provider
+class MockTaskQueueProvider:
+    """Test task queue provider for plugin registration testing."""
 
-    def create_job_queue(
-        self, configuration: Configuration, job_executor: JobExecutor | None = None
-    ) -> JobQueue:
-        """Create a test job queue implementation."""
-        return MockJobQueue()
+    def create_task_queue(self, configuration: Configuration) -> Huey:
+        """Create a test task queue implementation.
 
+        Returns MemoryHuey for immediate execution in tests.
+        """
+        from huey import MemoryHuey
 
-class MockJobQueue:
-    """Test job queue implementation (synchronous for testing)."""
-
-    def __init__(self) -> None:
-        self._jobs: list[Job] = []
-        self._next_id = 1
-
-    async def enqueue(self, job_type: str, job_data: dict, priority: int = 0) -> str:
-        """Enqueue a job for testing."""
-        job_id = f"test_job_{self._next_id}"
-        self._next_id += 1
-
-        job = Job(
-            job_id=job_id,
-            job_type=job_type,
-            job_data=job_data,
-            priority=priority,
-            created_at=datetime.now(),
+        return MemoryHuey(
+            "paise2-mock",
+            immediate=True,
+            results=True,
+            utc=True,
         )
-        self._jobs.append(job)
-        return job_id
-
-    async def dequeue(self, worker_id: str) -> Job | None:
-        """Dequeue a job for processing."""
-        for job in self._jobs:
-            if not hasattr(job, "worker_id") or job.worker_id is None:
-                # Create a new Job with worker_id since Job is frozen
-                updated_job = Job(
-                    job_id=job.job_id,
-                    job_type=job.job_type,
-                    job_data=job.job_data,
-                    priority=job.priority,
-                    created_at=job.created_at,
-                    worker_id=worker_id,
-                )
-                # Replace in the list
-                job_index = self._jobs.index(job)
-                self._jobs[job_index] = updated_job
-                return updated_job
-        return None
-
-    async def complete(self, job_id: str, result: dict | None = None) -> None:
-        """Mark a job as completed."""
-        # Remove completed jobs from the list for simplicity in tests
-        self._jobs = [job for job in self._jobs if job.job_id != job_id]
-
-    async def fail(self, job_id: str, error: str, retry: bool = True) -> None:
-        """Handle job failure."""
-        # For testing, just remove failed jobs
-        self._jobs = [job for job in self._jobs if job.job_id != job_id]
-
-    async def get_incomplete_jobs(self) -> list[Job]:
-        """Get all incomplete jobs."""
-        return [job for job in self._jobs if job.worker_id is None]
 
 
 # Test State Storage Provider
@@ -683,9 +635,9 @@ def register_data_storage_provider(register: Any) -> None:
 
 
 @hookimpl
-def register_job_queue_provider(register: Any) -> None:
-    """Register mock job queue provider."""
-    register(MockJobQueueProvider())
+def register_task_queue_provider(register: Any) -> None:
+    """Register mock task queue provider."""
+    register(MockTaskQueueProvider())
 
 
 @hookimpl

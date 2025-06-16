@@ -3,12 +3,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from paise2.models import CacheId, Content, ItemId, JobId, Metadata
+if TYPE_CHECKING:
+    from datetime import timedelta
+
+from paise2.models import CacheId, Content, ItemId, Metadata
 from paise2.plugins.core.interfaces import (
     # Host interfaces
     BaseHost,
@@ -27,9 +29,6 @@ from paise2.plugins.core.interfaces import (
     DataStorage,
     DataStorageHost,
     DataStorageProvider,
-    Job,
-    JobQueue,
-    JobQueueProvider,
     LifecycleAction,
     LifecycleHost,
     StateManager,
@@ -113,58 +112,6 @@ class TestPhase2Protocols:
 
         storage = provider.create_data_storage(MockConfiguration({}))
         assert isinstance(storage, DataStorage)
-
-    def test_job_dataclass(self) -> None:
-        """Test that Job dataclass is properly defined."""
-        now = datetime.now()
-        job = Job(
-            job_id="test-job",
-            job_type="test_type",
-            job_data={"key": "value"},
-            priority=1,
-            created_at=now,
-            worker_id="test-worker",
-        )
-
-        assert job.job_id == "test-job"
-        assert job.job_type == "test_type"
-        assert job.job_data == {"key": "value"}
-        assert job.priority == 1
-        assert job.created_at == now
-        assert job.worker_id == "test-worker"
-
-    def test_job_queue_provider_protocol(self) -> None:
-        """Test that JobQueueProvider protocol is properly defined."""
-
-        class TestJobQueue:
-            async def enqueue(
-                self, job_type: str, job_data: dict[str, Any], priority: int = 0
-            ) -> JobId:
-                return "test-job-id"
-
-            async def dequeue(self, worker_id: str) -> Job | None:
-                return None
-
-            async def complete(
-                self, job_id: JobId, result: dict[str, Any] | None = None
-            ) -> None:
-                pass
-
-            async def fail(self, job_id: JobId, error: str, retry: bool = True) -> None:
-                pass
-
-            async def get_incomplete_jobs(self) -> list[Job]:
-                return []
-
-        class TestJobQueueProvider:
-            def create_job_queue(self, configuration: Configuration) -> JobQueue:
-                return TestJobQueue()
-
-        provider = TestJobQueueProvider()
-        assert isinstance(provider, JobQueueProvider)
-
-        queue = provider.create_job_queue(MockConfiguration({}))
-        assert isinstance(queue, JobQueue)
 
     def test_state_storage_protocol(self) -> None:
         """Test that StateStorage protocol is properly defined."""

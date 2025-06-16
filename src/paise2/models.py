@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 # Type aliases for system identifiers
 ItemId = str
-JobId = str
 CacheId = str
 
 # Content type alias

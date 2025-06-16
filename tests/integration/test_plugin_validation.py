@@ -367,23 +367,20 @@ class SystemHealthDiagnostics:
     def _check_job_queue_health(
         self, singletons: Any, health_report: dict[str, Any]
     ) -> None:
-        """Check job queue system health."""
+        """Check task queue system health."""
         try:
-            import asyncio
+            # Check that task queue is available and functional
+            task_queue = singletons.task_queue
 
-            async def check_job_queue() -> bool:
-                job_queue = singletons.job_queue
-                # Test basic job queue operations
-                job_id = await job_queue.enqueue(
-                    "fetch_content", {"url": "health://check"}
-                )
-                incomplete = await job_queue.get_incomplete_jobs()
+            # For MemoryHuey with immediate=True, we just check it exists
+            # and is the expected type
+            from huey import MemoryHuey
 
-                return job_id is not None and len(incomplete) > 0
-
-            health_report["job_queue_functional"] = asyncio.run(check_job_queue())
+            health_report["job_queue_functional"] = (
+                task_queue is not None and isinstance(task_queue, MemoryHuey)
+            )
         except Exception as e:
-            health_report["errors"].append(f"Job queue health check failed: {e}")
+            health_report["errors"].append(f"Task queue health check failed: {e}")
 
     def _check_plugin_counts(self, health_report: dict[str, Any]) -> None:
         """Check plugin registration counts."""
@@ -397,7 +394,7 @@ class SystemHealthDiagnostics:
                 "data_storage_providers": len(
                     plugin_manager.get_data_storage_providers()
                 ),
-                "job_queue_providers": len(plugin_manager.get_job_queue_providers()),
+                "task_queue_providers": len(plugin_manager.get_task_queue_providers()),
                 "state_storage_providers": len(
                     plugin_manager.get_state_storage_providers()
                 ),

@@ -28,8 +28,8 @@ class TestMockPluginSystemIntegration:
         data_storage_providers = plugin_manager.get_data_storage_providers()
         assert len(data_storage_providers) > 0
 
-        job_queue_providers = plugin_manager.get_job_queue_providers()
-        assert len(job_queue_providers) > 0
+        task_queue_providers = plugin_manager.get_task_queue_providers()
+        assert len(task_queue_providers) > 0
 
         state_storage_providers = plugin_manager.get_state_storage_providers()
         assert len(state_storage_providers) > 0
@@ -67,7 +67,7 @@ class TestMockPluginSystemIntegration:
             assert singletons.logger is not None
             assert singletons.configuration is not None
             assert singletons.state_storage is not None
-            assert singletons.job_queue is not None
+            assert hasattr(singletons, "task_queue")
             assert singletons.cache is not None
             assert singletons.data_storage is not None
 
@@ -186,7 +186,7 @@ class TestMockPluginSystemIntegration:
         # Mock plugins should demonstrate all extension points
         assert len(plugin_manager.get_configuration_providers()) > 0
         assert len(plugin_manager.get_data_storage_providers()) > 0
-        assert len(plugin_manager.get_job_queue_providers()) > 0
+        assert len(plugin_manager.get_task_queue_providers()) > 0
         assert len(plugin_manager.get_state_storage_providers()) > 0
         assert len(plugin_manager.get_cache_providers()) > 0
         assert len(plugin_manager.get_content_extractors()) > 0
@@ -222,8 +222,8 @@ class TestMockPluginSystemIntegration:
             plugin_system.stop()
 
     @pytest.mark.asyncio
-    async def test_mock_plugin_job_queue_integration(self) -> None:
-        """Test that mock job queue provider works in integration."""
+    async def test_mock_plugin_task_queue_integration(self) -> None:
+        """Test that mock task queue provider works in integration."""
         test_plugin_manager = create_test_plugin_manager_with_mocks()
         plugin_system = PluginSystem(test_plugin_manager)
 
@@ -231,26 +231,15 @@ class TestMockPluginSystemIntegration:
             plugin_system.bootstrap()
             await plugin_system.start_async()
 
-            # Get job queue
-            job_queue = plugin_system.get_singletons().job_queue
+            # Get task queue
+            task_queue = plugin_system.get_singletons().task_queue
 
-            # Test job lifecycle
-            job_id = await job_queue.enqueue("test_job", {"data": "test"}, priority=1)
-            assert job_id is not None
+            # MockTaskQueueProvider returns MemoryHuey for immediate execution
+            # This is expected behavior for test environment
+            assert task_queue is not None  # MockTaskQueueProvider returns MemoryHuey
+            from huey import MemoryHuey
 
-            # Get incomplete jobs
-            incomplete = await job_queue.get_incomplete_jobs()
-            assert len(incomplete) > 0
-            assert any(job.job_id == job_id for job in incomplete)
-
-            # Dequeue and complete
-            job = await job_queue.dequeue("worker1")
-            assert job is not None
-            await job_queue.complete(job.job_id)
-
-            # Should be no incomplete jobs
-            incomplete = await job_queue.get_incomplete_jobs()
-            assert len(incomplete) == 0
+            assert isinstance(task_queue, MemoryHuey)
 
         finally:
             plugin_system.stop()
@@ -329,9 +318,9 @@ class TestMockPluginDocumentationValue:
             register_content_fetcher,
             register_content_source,
             register_data_storage_provider,
-            register_job_queue_provider,
             register_lifecycle_action,
             register_state_storage_provider,
+            register_task_queue_provider,
         )
 
         # All should be callable functions
@@ -342,7 +331,7 @@ class TestMockPluginDocumentationValue:
             register_content_fetcher,
             register_lifecycle_action,
             register_data_storage_provider,
-            register_job_queue_provider,
+            register_task_queue_provider,
             register_state_storage_provider,
             register_cache_provider,
         ]

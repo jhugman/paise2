@@ -566,16 +566,16 @@ class TestJobSchedulingIntegration:
         self.mock_job_queue = Mock()
         self.plugin_module_name = "paise2.plugins.test_plugin"
 
-    def test_base_host_schedule_fetch_with_job_queue(self) -> None:
-        """Test BaseHost schedule_fetch method with job queue integration."""
-        from paise2.plugins.core.hosts import BaseHostWithJobQueue
+    def test_base_host_schedule_fetch_with_task_queue(self) -> None:
+        """Test BaseHost schedule_fetch method with task queue integration."""
+        from paise2.plugins.core.hosts import BaseHostWithTaskQueue
 
-        host = BaseHostWithJobQueue(
+        host = BaseHostWithTaskQueue(
             logger=self.mock_logger,
             configuration=self.mock_configuration,
             state_storage=self.mock_state_storage,
             plugin_module_name=self.plugin_module_name,
-            job_queue=self.mock_job_queue,
+            task_queue=None,  # Use None for synchronous execution
         )
 
         test_url = "http://example.com/file.txt"
@@ -588,18 +588,18 @@ class TestJobSchedulingIntegration:
         # Job queue integration will be implemented in later prompts
         self.mock_job_queue.enqueue.assert_not_called()
 
-    def test_content_extractor_host_extract_file_with_job_queue(self) -> None:
-        """Test ContentExtractorHost extract_file method with job queue integration."""
-        from paise2.plugins.core.hosts import ContentExtractorHostWithJobQueue
+    def test_content_extractor_host_extract_file_with_task_queue(self) -> None:
+        """Test ContentExtractorHost extract_file method with task queue integration."""
+        from paise2.plugins.core.hosts import ContentExtractorHostWithTaskQueue
 
-        host = ContentExtractorHostWithJobQueue(
+        host = ContentExtractorHostWithTaskQueue(
             logger=self.mock_logger,
             configuration=self.mock_configuration,
             state_storage=self.mock_state_storage,
             plugin_module_name=self.plugin_module_name,
             data_storage=self.mock_data_storage,
             cache=self.mock_cache,
-            job_queue=self.mock_job_queue,
+            task_queue=None,  # Use None for synchronous execution
         )
 
         test_content = "nested content"

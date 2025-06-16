@@ -40,44 +40,6 @@ class TestPluginSystemPerformance:
             plugin_system.stop()
 
     @pytest.mark.asyncio
-    async def test_job_queue_performance_under_load(self) -> None:
-        """Test job queue performance with many concurrent jobs."""
-        test_plugin_manager = create_test_plugin_manager_with_mocks()
-        plugin_system = PluginSystem(test_plugin_manager)
-
-        try:
-            plugin_system.bootstrap()
-            await plugin_system.start_async()
-
-            job_queue = plugin_system.get_singletons().job_queue
-
-            # Enqueue many jobs quickly
-            start_time = time.time()
-            job_ids = []
-
-            for i in range(100):
-                job_id = await job_queue.enqueue(
-                    "fetch_content", {"url": f"test://{i}.txt"}, priority=i % 5
-                )
-                job_ids.append(job_id)
-
-            enqueue_time = time.time() - start_time
-
-            # Should be able to enqueue 100 jobs quickly (< 500ms)
-            assert enqueue_time < 0.5, f"Enqueuing 100 jobs took {enqueue_time:.3f}s"
-
-            # Should be able to get incomplete jobs quickly
-            start_time = time.time()
-            incomplete = await job_queue.get_incomplete_jobs()
-            query_time = time.time() - start_time
-
-            assert len(incomplete) > 0
-            assert query_time < 0.1, f"Querying incomplete jobs took {query_time:.3f}s"
-
-        finally:
-            plugin_system.stop()
-
-    @pytest.mark.asyncio
     async def test_cache_performance_with_many_operations(self) -> None:
         """Test cache performance with many save/get operations."""
         test_plugin_manager = create_test_plugin_manager_with_mocks()
@@ -277,12 +239,6 @@ class TestPluginSystemStressTesting:
             import asyncio
 
             async def concurrent_operations() -> int:
-                # Job queue operations
-                job_tasks = [
-                    singletons.job_queue.enqueue("fetch_content", {"url": f"test{i}"})
-                    for i in range(10)
-                ]
-
                 # Cache operations
                 cache_tasks = [
                     singletons.cache.save("stress_test", f"content{i}", ".txt")
@@ -312,7 +268,7 @@ class TestPluginSystemStressTesting:
 
                 # Execute all operations concurrently
                 results = await asyncio.gather(
-                    *job_tasks, *cache_tasks, *storage_tasks, return_exceptions=True
+                    *cache_tasks, *storage_tasks, return_exceptions=True
                 )
 
                 # Also run state operations
@@ -442,11 +398,9 @@ class TestPluginSystemResourceManagement:
         # Use async resources
         singletons = plugin_system.get_singletons()
         cache_id = await singletons.cache.save("cleanup", "test content", ".txt")
-        job_id = await singletons.job_queue.enqueue("test", {"data": "test"})
 
         # Resources should be functional
         assert await singletons.cache.get(cache_id) == "test content"
-        assert job_id is not None
 
         # Shutdown should clean up async resources
         plugin_system.stop()

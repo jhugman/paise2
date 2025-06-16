@@ -8,11 +8,14 @@ from typing import TYPE_CHECKING, Any
 from paise2.utils.logging import SimpleInMemoryLogger
 
 if TYPE_CHECKING:
+    from typing import Any
+
+    from huey import Huey
+
     from paise2.plugins.core.interfaces import (
         CacheManager,
         Configuration,
         DataStorage,
-        JobQueue,
         Logger,
         StateStorage,
     )
@@ -29,7 +32,7 @@ __all__ = [
 _SINGLETONS_NOT_CREATED = "Singletons not created during startup"
 _NO_CONFIG_PROVIDERS = "No configuration providers found"
 _NO_STATE_PROVIDERS = "No state storage providers found"
-_NO_JOB_QUEUE_PROVIDERS = "No job queue providers found"
+_NO_TASK_QUEUE_PROVIDERS = "No task queue providers found"
 _NO_CACHE_PROVIDERS = "No cache providers found"
 _NO_DATA_STORAGE_PROVIDERS = "No data storage providers found"
 _NO_STATE_PROVIDERS_AVAILABLE = "No state storage providers available"
@@ -57,14 +60,14 @@ class Singletons:
         logger: Logger,
         configuration: Configuration,
         state_storage: StateStorage,
-        job_queue: JobQueue,
+        task_queue: Huey,
         cache: CacheManager,
         data_storage: DataStorage,
     ):
         self.logger = logger
         self.configuration = configuration
         self.state_storage = state_storage
-        self.job_queue = job_queue
+        self.task_queue = task_queue
         self.cache = cache
         self.data_storage = data_storage
 
@@ -145,8 +148,8 @@ class StartupManager:
         if not self.plugin_manager.get_state_storage_providers():
             raise StartupError(_NO_STATE_PROVIDERS)
 
-        if not self.plugin_manager.get_job_queue_providers():
-            raise StartupError(_NO_JOB_QUEUE_PROVIDERS)
+        if not self.plugin_manager.get_task_queue_providers():
+            raise StartupError(_NO_TASK_QUEUE_PROVIDERS)
 
         if not self.plugin_manager.get_cache_providers():
             raise StartupError(_NO_CACHE_PROVIDERS)
@@ -181,7 +184,7 @@ class StartupManager:
 
         # Step 4: Create other singletons
         cache = self._create_cache_singleton(final_configuration)
-        job_queue = self._create_job_queue_singleton(final_configuration)
+        task_queue = self._create_task_queue_singleton(final_configuration)
         data_storage = self._create_data_storage_singleton(final_configuration)
 
         # Step 5: Create logger and replay bootstrap logs
@@ -193,7 +196,7 @@ class StartupManager:
             logger=logger,
             configuration=final_configuration,
             state_storage=state_storage,
-            job_queue=job_queue,
+            task_queue=task_queue,
             cache=cache,
             data_storage=data_storage,
         )
@@ -238,28 +241,23 @@ class StartupManager:
         self.bootstrap_logger.info("State storage singleton created")
         return state_storage
 
-    def _create_job_queue_singleton(self, configuration: Configuration) -> JobQueue:
-        """Create the job queue singleton."""
-        self.bootstrap_logger.info("Creating job queue singleton")
+    def _create_task_queue_singleton(self, configuration: Configuration) -> Huey:
+        """Create the task queue singleton."""
+        self.bootstrap_logger.info("Creating task queue singleton")
 
-        providers = self.plugin_manager.get_job_queue_providers()
+        providers = self.plugin_manager.get_task_queue_providers()
         if not providers:
-            error_msg = "No job queue providers available"
+            error_msg = "No task queue providers available"
             raise StartupError(error_msg)
 
         # Use first provider (provider selection logic can be enhanced later)
         provider = providers[0]
 
-        # Check if provider needs a job executor (for synchronous queues)
-        # Create a default job executor for synchronous providers
-        from paise2.plugins.core.jobs import DefaultJobExecutor
+        # Create task queue using provider
+        task_queue = provider.create_task_queue(configuration)
 
-        job_executor = DefaultJobExecutor()
-
-        job_queue = provider.create_job_queue(configuration, job_executor)
-
-        self.bootstrap_logger.info("Job queue singleton created")
-        return job_queue
+        self.bootstrap_logger.info("Task queue singleton created")
+        return task_queue
 
     def _create_cache_singleton(self, configuration: Configuration) -> CacheManager:
         """Create the cache singleton."""

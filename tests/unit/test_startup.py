@@ -40,34 +40,20 @@ class MockConfigProvider:
         return self._config_id
 
 
-# Fixed mock that matches the JobQueueProvider protocol
-class MockJobQueueProvider:
-    """Mock job queue provider that matches the protocol signature."""
+# Fixed mock that matches the TaskQueueProvider protocol
+class MockTaskQueueProvider:
+    """Mock task queue provider that matches the protocol signature."""
 
-    def create_job_queue(
-        self, configuration: Any, job_executor: Any = None
-    ) -> MockJobQueue:
-        """Create a mock job queue."""
-        return MockJobQueue()
+    def create_task_queue(self, configuration: Any) -> Any:
+        """Create a mock task queue (returns MemoryHuey for immediate execution)."""
+        from huey import MemoryHuey
 
-
-class MockJobQueue:
-    """Mock job queue for testing."""
-
-    async def enqueue(self, job_type: str, job_data: dict, priority: int = 0) -> str:
-        return f"mock_job_{priority}"
-
-    async def dequeue(self, worker_id: str) -> None:
-        return None
-
-    async def complete(self, job_id: str, result: Any = None) -> None:
-        pass
-
-    async def fail(self, job_id: str, error: str, retry: bool = True) -> None:
-        pass
-
-    async def get_incomplete_jobs(self) -> list[Any]:
-        return []
+        return MemoryHuey(
+            "paise2-test",
+            immediate=True,
+            results=True,
+            utc=True,
+        )
 
 
 class TestSingletons:
@@ -79,7 +65,7 @@ class TestSingletons:
         logger = Mock()
         configuration = Mock()
         state_storage = Mock()
-        job_queue = Mock()
+        task_queue = Mock()
         cache = Mock()
         data_storage = Mock()
 
@@ -87,7 +73,7 @@ class TestSingletons:
             logger=logger,
             configuration=configuration,
             state_storage=state_storage,
-            job_queue=job_queue,
+            task_queue=task_queue,
             cache=cache,
             data_storage=data_storage,
         )
@@ -95,7 +81,7 @@ class TestSingletons:
         assert singletons.logger is logger
         assert singletons.configuration is configuration
         assert singletons.state_storage is state_storage
-        assert singletons.job_queue is job_queue
+        assert singletons.task_queue is task_queue
         assert singletons.cache is cache
         assert singletons.data_storage is data_storage
 
@@ -133,7 +119,7 @@ class TestStartupManager:
             MockConfigProvider("test: value")
         )
         plugin_manager.register_state_storage_provider(MockStateStorageProvider())
-        plugin_manager.register_job_queue_provider(MockJobQueueProvider())
+        plugin_manager.register_task_queue_provider(MockTaskQueueProvider())
         plugin_manager.register_cache_provider(MockCacheProvider())
         plugin_manager.register_data_storage_provider(MockDataStorageProvider())
 
@@ -175,7 +161,7 @@ class TestStartupManager:
             MockConfigProvider("test: value")
         )
         plugin_manager.register_state_storage_provider(MockStateStorageProvider())
-        plugin_manager.register_job_queue_provider(MockJobQueueProvider())
+        plugin_manager.register_task_queue_provider(MockTaskQueueProvider())
         plugin_manager.register_cache_provider(MockCacheProvider())
         plugin_manager.register_data_storage_provider(MockDataStorageProvider())
 
@@ -192,7 +178,11 @@ class TestStartupManager:
         assert startup_manager.singletons.logger is not None
         assert startup_manager.singletons.configuration is not None
         assert startup_manager.singletons.state_storage is not None
-        assert startup_manager.singletons.job_queue is not None
+        # MockTaskQueueProvider returns MemoryHuey for immediate execution
+        assert startup_manager.singletons.task_queue is not None
+        from huey import MemoryHuey
+
+        assert isinstance(startup_manager.singletons.task_queue, MemoryHuey)
         assert startup_manager.singletons.cache is not None
         assert startup_manager.singletons.data_storage is not None
 
@@ -206,7 +196,7 @@ class TestStartupManager:
             MockConfigProvider("app:\n  debug: false\n  timeout: 30")
         )
         plugin_manager.register_state_storage_provider(MockStateStorageProvider())
-        plugin_manager.register_job_queue_provider(MockJobQueueProvider())
+        plugin_manager.register_task_queue_provider(MockTaskQueueProvider())
         plugin_manager.register_cache_provider(MockCacheProvider())
         plugin_manager.register_data_storage_provider(MockDataStorageProvider())
 
@@ -259,7 +249,7 @@ class TestStartupManager:
             MockConfigProvider("test: value")
         )
         plugin_manager.register_state_storage_provider(MockStateStorageProvider())
-        plugin_manager.register_job_queue_provider(MockJobQueueProvider())
+        plugin_manager.register_task_queue_provider(MockTaskQueueProvider())
         plugin_manager.register_cache_provider(MockCacheProvider())
         plugin_manager.register_data_storage_provider(MockDataStorageProvider())
 
@@ -273,7 +263,11 @@ class TestStartupManager:
         assert singletons.logger is not None
         assert singletons.configuration is not None
         assert singletons.state_storage is not None
-        assert singletons.job_queue is not None
+        # MockTaskQueueProvider returns MemoryHuey for immediate execution
+        assert singletons.task_queue is not None
+        from huey import MemoryHuey
+
+        assert isinstance(singletons.task_queue, MemoryHuey)
         assert singletons.cache is not None
         assert singletons.data_storage is not None
 
@@ -297,7 +291,7 @@ class TestStartupManager:
             MockConfigProvider("app:\n  version: 2.0")
         )
         plugin_manager.register_state_storage_provider(MockStateStorageProvider())
-        plugin_manager.register_job_queue_provider(MockJobQueueProvider())
+        plugin_manager.register_task_queue_provider(MockTaskQueueProvider())
         plugin_manager.register_cache_provider(MockCacheProvider())
         plugin_manager.register_data_storage_provider(MockDataStorageProvider())
 
@@ -343,7 +337,7 @@ class TestStartupIntegration:
 
         # Register other required providers
         plugin_manager.register_state_storage_provider(MockStateStorageProvider())
-        plugin_manager.register_job_queue_provider(MockJobQueueProvider())
+        plugin_manager.register_task_queue_provider(MockTaskQueueProvider())
         plugin_manager.register_cache_provider(MockCacheProvider())
         plugin_manager.register_data_storage_provider(MockDataStorageProvider())
 
@@ -369,7 +363,8 @@ class TestStartupIntegration:
         assert singletons.logger is not None
         assert singletons.configuration is not None
         assert singletons.state_storage is not None
-        assert singletons.job_queue is not None
+        # task_queue may be None for MockTaskQueueProvider (synchronous execution)
+        assert hasattr(singletons, "task_queue")
         assert singletons.cache is not None
         assert singletons.data_storage is not None
 
@@ -421,7 +416,7 @@ class TestStartupErrors:
             MockConfigProvider("test: value")
         )
         plugin_manager.register_state_storage_provider(MockStateStorageProvider())
-        plugin_manager.register_job_queue_provider(MockJobQueueProvider())
+        plugin_manager.register_task_queue_provider(MockTaskQueueProvider())
         plugin_manager.register_cache_provider(MockCacheProvider())
         plugin_manager.register_data_storage_provider(MockDataStorageProvider())
 

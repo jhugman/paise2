@@ -47,7 +47,7 @@ class TestPluginManager:
             "register_content_fetcher",
             "register_lifecycle_action",
             "register_data_storage_provider",
-            "register_job_queue_provider",
+            "register_task_queue_provider",
             "register_state_storage_provider",
             "register_cache_provider",
         ]

@@ -14,7 +14,6 @@ if TYPE_CHECKING:
         CacheManager,
         Configuration,
         DataStorage,
-        JobQueue,
         StateManager,
         StateStorage,
     )
@@ -241,8 +240,8 @@ class LifecycleHost(BaseHost):
 
 
 # Hosts with job queue integration
-class BaseHostWithJobQueue(BaseHost):
-    """BaseHost with job queue integration for scheduling operations."""
+class BaseHostWithTaskQueue(BaseHost):
+    """BaseHost with task queue integration for scheduling operations."""
 
     def __init__(
         self,
@@ -250,19 +249,19 @@ class BaseHostWithJobQueue(BaseHost):
         configuration: Configuration,
         state_storage: StateStorage,
         plugin_module_name: str,
-        job_queue: JobQueue,
+        task_queue: Any,
     ):
         super().__init__(logger, configuration, state_storage, plugin_module_name)
-        self._job_queue = job_queue
+        self._task_queue = task_queue
 
     def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
-        """Schedule a fetch operation with job queue integration."""
-        # NOTE: Job queue integration will be implemented when job handling is added
+        """Schedule a fetch operation with task queue integration."""
+        # NOTE: Task queue integration will be implemented when task handling is added
         # For now, this is a placeholder method
 
 
-class ContentExtractorHostWithJobQueue(ContentExtractorHost):
-    """ContentExtractorHost with job queue integration for recursive extraction."""
+class ContentExtractorHostWithTaskQueue(ContentExtractorHost):
+    """ContentExtractorHost with task queue integration for recursive extraction."""
 
     def __init__(  # noqa: PLR0913
         self,
@@ -272,7 +271,7 @@ class ContentExtractorHostWithJobQueue(ContentExtractorHost):
         plugin_module_name: str,
         data_storage: DataStorage,
         cache: CacheManager,
-        job_queue: JobQueue,
+        task_queue: Any,
     ):
         super().__init__(
             logger,
@@ -282,7 +281,7 @@ class ContentExtractorHostWithJobQueue(ContentExtractorHost):
             data_storage,
             cache,
         )
-        self._job_queue = job_queue
+        self._task_queue = task_queue
 
     def extract_file(self, content: Content, metadata: Metadata) -> None:
         """Request extraction of nested content with job queue integration."""

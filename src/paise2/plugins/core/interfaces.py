@@ -7,17 +7,17 @@ from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
-    Awaitable,
-    Callable,
     Dict,
     Protocol,
     runtime_checkable,
 )
 
 if TYPE_CHECKING:
-    from datetime import datetime, timedelta
+    from datetime import timedelta
 
-    from paise2.models import CacheId, Content, ItemId, JobId, Metadata
+    from huey import Huey
+
+    from paise2.models import CacheId, Content, ItemId, Metadata
 
 # Type aliases for clarity
 ConfigurationDict = Dict[str, Any]
@@ -308,166 +308,25 @@ class DataStorage(Protocol):
         ...
 
 
-@dataclass(frozen=True)
-class Job:
-    """
-    Represents a job in the job queue system.
-
-    Jobs are the primary unit of work in the system, handling
-    content fetching, extraction, and storage operations.
-    """
-
-    job_id: JobId
-    job_type: str
-    job_data: dict[str, Any]
-    priority: int
-    created_at: datetime
-    worker_id: str | None = None
-
-
 @runtime_checkable
-class JobQueueProvider(Protocol):
+class TaskQueueProvider(Protocol):
     """
-    Provides job queue implementation for the system.
+    Provides task queue implementation using Huey directly.
 
-    Plugins can contribute different job queue backends
-    (e.g., synchronous, SQLite-based, Redis-based) for handling
-    asynchronous work processing.
+    Replaces JobQueueProvider with direct Huey integration for task processing.
+    Returns Huey instances or None for synchronous execution.
     """
 
-    def create_job_queue(
-        self, configuration: Configuration, job_executor: JobExecutor | None = None
-    ) -> JobQueue:
+    def create_task_queue(self, configuration: Configuration) -> Huey:
         """
-        Create a job queue instance using the provided configuration.
+        Create a task queue instance using the provided configuration.
 
         Args:
             configuration: System configuration dictionary
-            job_executor: Optional job executor for immediate execution
-                         (required for synchronous queues, ignored for persistent)
 
         Returns:
-            JobQueue instance
-        """
-        ...
-
-
-@runtime_checkable
-class JobQueue(Protocol):
-    """
-    Interface for job queue operations.
-
-    Handles queueing, dequeuing, and tracking of jobs for
-    asynchronous processing of content operations.
-    """
-
-    async def enqueue(
-        self, job_type: str, job_data: dict[str, Any], priority: int = 0
-    ) -> JobId:
-        """
-        Add a new job to the queue.
-
-        Args:
-            job_type: Type of job (e.g., 'fetch_content', 'extract_content')
-            job_data: Job-specific data
-            priority: Job priority (higher numbers = higher priority)
-
-        Returns:
-            Unique identifier for the enqueued job
-        """
-        ...
-
-    async def dequeue(self, worker_id: str) -> Job | None:
-        """
-        Get the next job from the queue for processing.
-
-        Args:
-            worker_id: Identifier of the worker requesting the job
-
-        Returns:
-            Next job to process, or None if queue is empty
-        """
-        ...
-
-    async def complete(
-        self, job_id: JobId, result: dict[str, Any] | None = None
-    ) -> None:
-        """
-        Mark a job as completed.
-
-        Args:
-            job_id: Identifier of the completed job
-            result: Optional result data from job processing
-        """
-        ...
-
-    async def fail(self, job_id: JobId, error: str, retry: bool = True) -> None:
-        """
-        Mark a job as failed.
-
-        Args:
-            job_id: Identifier of the failed job
-            error: Error message describing the failure
-            retry: Whether the job should be retried
-        """
-        ...
-
-    async def get_incomplete_jobs(self) -> list[Job]:
-        """
-        Get all jobs that are not yet completed.
-
-        Returns:
-            List of incomplete jobs
-        """
-        ...
-
-
-@runtime_checkable
-class JobExecutor(Protocol):
-    """
-    Interface for executing jobs by routing them to appropriate handlers.
-
-    Provides the core job execution logic that can be used by both
-    synchronous queues (immediate execution) and persistent queues
-    (worker-based execution).
-    """
-
-    async def execute_job(self, job: Job) -> dict[str, Any]:
-        """
-        Execute a job and return the result.
-
-        Args:
-            job: Job to execute
-
-        Returns:
-            Job execution result data
-
-        Raises:
-            ValueError: If no handler is registered for the job type
-            Exception: Any exception from the job handler
-        """
-        ...
-
-    def register_handler(
-        self,
-        job_type: str,
-        handler: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
-    ) -> None:
-        """
-        Register a handler function for a specific job type.
-
-        Args:
-            job_type: Type of job this handler can process
-            handler: Async function that takes job_data and returns result
-        """
-        ...
-
-    def get_registered_types(self) -> list[str]:
-        """
-        Get list of job types that have registered handlers.
-
-        Returns:
-            List of job types with handlers
+            Huey instance for task execution
+            (MemoryHuey for testing, persistent for production)
         """
         ...
 

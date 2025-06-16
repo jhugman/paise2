@@ -21,9 +21,9 @@ from tests.fixtures.mock_plugins import (
     MockContentSource,
     MockDataStorageHost,
     MockDataStorageProvider,
-    MockJobQueueProvider,
     MockLifecycleAction,
     MockStateStorageProvider,
+    MockTaskQueueProvider,
 )
 
 
@@ -144,10 +144,13 @@ class TestMockPluginIntegration:
         data_storage = data_provider.create_data_storage(config)
         assert hasattr(data_storage, "add_item")
 
-        # Test JobQueueProvider
-        job_provider = MockJobQueueProvider()
-        job_queue = job_provider.create_job_queue(config)
-        assert hasattr(job_queue, "enqueue")
+        # Test TaskQueueProvider
+        task_provider = MockTaskQueueProvider()
+        task_queue = task_provider.create_task_queue(config)
+        assert task_queue is not None  # Returns MemoryHuey for immediate execution
+        from huey import MemoryHuey
+
+        assert isinstance(task_queue, MemoryHuey)
 
         # Test StateStorageProvider
         state_provider = MockStateStorageProvider()
@@ -158,29 +161,6 @@ class TestMockPluginIntegration:
         cache_provider = MockCacheProvider()
         cache_manager = cache_provider.create_cache(config)
         assert hasattr(cache_manager, "save")
-
-    @pytest.mark.asyncio
-    async def test_mock_job_queue_operations(self) -> None:
-        """Test MockJobQueue basic operations."""
-        job_provider = MockJobQueueProvider()
-        queue = job_provider.create_job_queue(MockConfiguration({}))
-
-        # Test job lifecycle
-        job_id = await queue.enqueue("test_job", {"data": "test"}, priority=1)
-        assert job_id.startswith("test_job_")
-
-        # Check incomplete jobs
-        incomplete = await queue.get_incomplete_jobs()
-        assert len(incomplete) == 1
-
-        # Dequeue and complete
-        job = await queue.dequeue("worker1")
-        assert job is not None
-        await queue.complete(job.job_id)
-
-        # Should be no incomplete jobs
-        incomplete = await queue.get_incomplete_jobs()
-        assert len(incomplete) == 0
 
     @pytest.mark.asyncio
     async def test_mock_cache_operations(self) -> None:
@@ -278,9 +258,9 @@ class TestMockPluginDocumentation:
             register_content_fetcher,
             register_content_source,
             register_data_storage_provider,
-            register_job_queue_provider,
             register_lifecycle_action,
             register_state_storage_provider,
+            register_task_queue_provider,
         )
 
         # All registration functions should be callable
@@ -290,7 +270,7 @@ class TestMockPluginDocumentation:
         assert callable(register_content_fetcher)
         assert callable(register_lifecycle_action)
         assert callable(register_data_storage_provider)
-        assert callable(register_job_queue_provider)
+        assert callable(register_task_queue_provider)
         assert callable(register_state_storage_provider)
         assert callable(register_cache_provider)
 

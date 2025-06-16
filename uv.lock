@@ -43,6 +43,12 @@ wheels = [
 ]
 
 [[package]]
+name = "huey"
+version = "2.5.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/86/8c/2dfecf3705f5e522097b4e9fb6fb38e627a0340f8362cc05bd7a845e4279/huey-2.5.3.tar.gz", hash = "sha256:089fc72b97fd26a513f15b09925c56fad6abe4a699a1f0e902170b37e85163c7", size = 836918 }
+
+[[package]]
 name = "iniconfig"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -94,6 +100,7 @@ name = "paise2"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "huey" },
     { name = "pluggy" },
     { name = "pyyaml" },
     { name = "typing-extensions" },
@@ -122,6 +129,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "huey", specifier = ">=2.5.3" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "pluggy", specifier = ">=1.0.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0.0" },

@@ -24,14 +24,13 @@ from .mock_plugins import (
     MockContentSourceHost,
     MockDataStorage,
     MockDataStorageProvider,
-    MockJobQueue,
-    MockJobQueueProvider,
     MockLifecycleAction,
     MockLifecycleHost,
     MockLogger,
     MockStateManager,
     MockStateStorage,
     MockStateStorageProvider,
+    MockTaskQueueProvider,
 )
 
 
@@ -92,13 +91,12 @@ __all__ = [
     "MockContentSourceHost",
     "MockDataStorage",
     "MockDataStorageProvider",
-    "MockJobQueue",
-    "MockJobQueueProvider",
     "MockLifecycleAction",
     "MockLifecycleHost",
     "MockLogger",
     "MockStateManager",
     "MockStateStorage",
     "MockStateStorageProvider",
+    "MockTaskQueueProvider",
     "create_test_plugin_manager_with_mocks",
 ]

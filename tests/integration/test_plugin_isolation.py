@@ -192,54 +192,6 @@ class TestPluginIsolationAndPartitioning:
         finally:
             plugin_system.stop()
 
-    def test_plugin_job_queue_isolation_through_worker_ids(self) -> None:
-        """Test that job queue operations can be isolated by worker IDs."""
-
-        @pytest.mark.asyncio
-        async def _test_job_isolation() -> None:
-            test_plugin_manager = create_test_plugin_manager_with_mocks()
-            plugin_system = PluginSystem(test_plugin_manager)
-
-            try:
-                plugin_system.bootstrap()
-                await plugin_system.start_async()
-
-                job_queue = plugin_system.get_singletons().job_queue
-
-                # Different workers should be able to handle different jobs
-                job_id1 = await job_queue.enqueue("fetch_content", {"url": "test1"})
-                job_id2 = await job_queue.enqueue("extract_content", {"data": "test2"})
-                # job_id3 is for testing that there are still incomplete jobs
-                await job_queue.enqueue("store_content", {"item": "test3"})
-
-                # Workers should be able to dequeue jobs
-                job1 = await job_queue.dequeue("worker1")
-                job2 = await job_queue.dequeue("worker2")
-
-                assert job1 is not None
-                assert job2 is not None
-                assert job1.job_id != job2.job_id
-
-                # Jobs should be properly assigned to workers
-                if job1.job_id in (job_id1, job_id2):
-                    assert job1.worker_id == "worker1"
-
-                # Complete jobs should update their status
-                await job_queue.complete(job1.job_id, {"status": "success"})
-                await job_queue.complete(job2.job_id, {"status": "success"})
-
-                # Should still have incomplete jobs
-                incomplete = await job_queue.get_incomplete_jobs()
-                assert len(incomplete) >= 1
-
-            finally:
-                plugin_system.stop()
-
-        # Run the async test
-        import asyncio
-
-        asyncio.run(_test_job_isolation())
-
 
 class TestPluginSystemIntegration:
     """Test complete plugin system integration scenarios."""
@@ -287,7 +239,7 @@ class TestPluginSystemIntegration:
             assert singletons.logger is not None
             assert singletons.configuration is not None
             assert singletons.state_storage is not None
-            assert singletons.job_queue is not None
+            assert singletons.task_queue is not None
             assert singletons.cache is not None
             assert singletons.data_storage is not None
 
@@ -308,16 +260,10 @@ class TestPluginSystemIntegration:
                 host, "stored content", metadata
             )
 
-            # 4. Queue a job
-            job_id = await singletons.job_queue.enqueue(
-                "fetch_content", {"test": "integration"}
-            )
-
             # All operations should succeed
             assert singletons.state_storage.get("test", "integration_test") == "success"
             assert await singletons.cache.get(cache_id) == "cached content"
             assert await singletons.data_storage.find_item(item_id) is not None
-            assert job_id is not None
 
         finally:
             plugin_system.stop()

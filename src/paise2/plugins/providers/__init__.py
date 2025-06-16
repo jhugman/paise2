@@ -1,5 +1,5 @@
-# ABOUTME: Cache provider package for content caching with partitioning.
-# ABOUTME: Provides implementations of CacheManager and CacheProvider protocols.
+# ABOUTME: Provider package for cache and task queue implementations
+# ABOUTME: Provides implementations of various system infrastructure protocols
 
 from .cache import (
     CacheEntry,
@@ -9,12 +9,20 @@ from .cache import (
     MemoryCacheManager,
     MemoryCacheProvider,
 )
+from .task_queue import (
+    HueyRedisTaskQueueProvider,
+    HueySQLiteTaskQueueProvider,
+    NoTaskQueueProvider,
+)
 
 __all__ = [
     "CacheEntry",
     "ExtensionCacheManager",
     "FileCacheManager",
     "FileCacheProvider",
+    "HueyRedisTaskQueueProvider",
+    "HueySQLiteTaskQueueProvider",
     "MemoryCacheManager",
     "MemoryCacheProvider",
+    "NoTaskQueueProvider",
 ]

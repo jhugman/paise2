@@ -1,4 +1,4 @@
-# ABOUTME: Plugin registration system using pluggy for discovery and registration
+# ABOUTME: Plugin system using pluggy for discovery and registration
 # ABOUTME: Handles internal plugin discovery, external plugin loading, and validation
 
 from __future__ import annotations
@@ -20,9 +20,9 @@ from paise2.plugins.core.interfaces import (
     ContentFetcher,
     ContentSource,
     DataStorageProvider,
-    JobQueueProvider,
     LifecycleAction,
     StateStorageProvider,
+    TaskQueueProvider,
 )
 
 logger = logging.getLogger(__name__)
@@ -72,10 +72,10 @@ class PluginHooks:
         """Register a data storage provider."""
 
     @hookspec
-    def register_job_queue_provider(
-        self, register: Callable[[JobQueueProvider], None]
+    def register_task_queue_provider(
+        self, register: Callable[[TaskQueueProvider], None]
     ) -> None:
-        """Register a job queue provider."""
+        """Register a task queue provider."""
 
     @hookspec
     def register_state_storage_provider(
@@ -114,7 +114,7 @@ class PluginManager:
         self._content_fetchers: list[ContentFetcher] = []
         self._lifecycle_actions: list[LifecycleAction] = []
         self._data_storage_providers: list[DataStorageProvider] = []
-        self._job_queue_providers: list[JobQueueProvider] = []
+        self._task_queue_providers: list[TaskQueueProvider] = []
         self._state_storage_providers: list[StateStorageProvider] = []
         self._cache_providers: list[CacheProvider] = []
 
@@ -249,8 +249,8 @@ class PluginManager:
         self.pm.hook.register_data_storage_provider(
             register=self._register_data_storage_provider
         )
-        self.pm.hook.register_job_queue_provider(
-            register=self._register_job_queue_provider
+        self.pm.hook.register_task_queue_provider(
+            register=self._register_task_queue_provider
         )
         self.pm.hook.register_state_storage_provider(
             register=self._register_state_storage_provider
@@ -288,10 +288,10 @@ class PluginManager:
         if self._validate_and_log(provider, DataStorageProvider):
             self._data_storage_providers.append(provider)
 
-    def _register_job_queue_provider(self, provider: JobQueueProvider) -> None:
-        """Register a job queue provider."""
-        if self._validate_and_log(provider, JobQueueProvider):
-            self._job_queue_providers.append(provider)
+    def _register_task_queue_provider(self, provider: TaskQueueProvider) -> None:
+        """Register a task queue provider."""
+        if self._validate_and_log(provider, TaskQueueProvider):
+            self._task_queue_providers.append(provider)
 
     def _register_state_storage_provider(self, provider: StateStorageProvider) -> None:
         """Register a state storage provider."""
@@ -346,10 +346,10 @@ class PluginManager:
             return True
         return False
 
-    def register_job_queue_provider(self, provider: JobQueueProvider) -> bool:
-        """Register a job queue provider directly."""
-        if self._validate_and_log(provider, JobQueueProvider):
-            self._job_queue_providers.append(provider)
+    def register_task_queue_provider(self, provider: TaskQueueProvider) -> bool:
+        """Register a task queue provider directly."""
+        if self._validate_and_log(provider, TaskQueueProvider):
+            self._task_queue_providers.append(provider)
             return True
         return False
 
@@ -392,9 +392,9 @@ class PluginManager:
         """Get all registered data storage providers."""
         return self._data_storage_providers.copy()
 
-    def get_job_queue_providers(self) -> list[JobQueueProvider]:
-        """Get all registered job queue providers."""
-        return self._job_queue_providers.copy()
+    def get_task_queue_providers(self) -> list[TaskQueueProvider]:
+        """Get all registered task queue providers."""
+        return self._task_queue_providers.copy()
 
     def get_state_storage_providers(self) -> list[StateStorageProvider]:
         """Get all registered state storage providers."""
