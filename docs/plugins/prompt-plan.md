@@ -1093,111 +1093,119 @@ Focus on:
 
 ---
 
-## PROMPT 17: Content Processing Pipeline Foundation
+## PROMPT 17: TaskQueueProvider Implementation
 
 ### Context
-Begin implementing the content processing pipeline, starting with the ContentSource extension point that identifies resources to be processed.
+Update the job queue system to use Huey directly with TaskQueueProvider, replacing the abstract JobQueue interfaces. This aligns the code with the refined architecture from the spec.
 
 ### Task
 ```
-Implement the ContentSource extension point and supporting infrastructure for identifying and scheduling content to be processed.
+Replace the existing JobQueue abstraction with direct Huey integration via TaskQueueProvider, implementing the two-phase initialization pattern.
 
 Requirements:
-1. Create comprehensive ContentSource support:
-   - Host implementation with scheduling capabilities
-   - Integration with job queue for fetch scheduling
-   - Configuration-driven resource discovery
-2. Implement ContentSourceHost functionality:
-   - schedule_fetch() method with job queue integration
-   - schedule_next_run() for recurring sources
-   - Configuration access for source parameters
-3. Add source lifecycle management:
-   - Start and stop source operations
-   - Error handling and recovery
-   - Resource cleanup
-4. Create comprehensive tests:
-   - Source scheduling and job creation
-   - Lifecycle management
-   - Configuration integration
-   - Error handling
-5. Add example ContentSource implementations
-6. Include proper logging and monitoring
+1. Update TaskQueueProvider interface:
+   - Replace JobQueueProvider with TaskQueueProvider
+   - Return Huey instances directly (or None for sync)
+   - Remove JobQueue, JobExecutor abstractions
+2. Create TaskQueueProvider implementations:
+   - NoTaskQueueProvider for testing (returns None)
+   - HueySQLiteTaskQueueProvider for development
+   - HueyRedisTaskQueueProvider for production
+3. Update profile configurations:
+   - Update test/dev/production profiles to use TaskQueueProvider
+   - Add proper Huey configuration in profiles
+4. Update host interfaces:
+   - Remove JobQueue dependencies from hosts
+   - Prepare for task-based scheduling (next prompt)
+5. Add Huey dependency and configuration:
+   - Add huey to pyproject.toml dependencies
+   - Create basic Huey configuration structure
+6. Update existing tests:
+   - Replace JobQueue tests with TaskQueueProvider tests
+   - Test all provider implementations
+   - Verify profile integration works
 
 Focus on:
-- Clean ContentSource interface implementation
-- Robust job scheduling integration
-- Proper lifecycle management
-- Configuration-driven operation
-- Comprehensive testing and validation
+- Clean migration from JobQueue to TaskQueueProvider
+- Proper Huey dependency integration
+- Updated profile configurations
+- No breaking changes to existing extension points
+- Comprehensive testing of new providers
 ```
 
 ### Task List
-- [ ] Implement ContentSourceHost with scheduling capabilities
-- [ ] Add schedule_fetch() method with job queue integration
-- [ ] Create schedule_next_run() for recurring source operations
-- [ ] Implement source lifecycle management (start/stop operations)
-- [ ] Add comprehensive error handling and recovery for sources
-- [ ] Create example ContentSource implementations for testing
-- [ ] Add comprehensive tests for source scheduling and job creation
-- [ ] Test source lifecycle management and cleanup
-- [ ] Verify configuration integration works for source parameters
-- [ ] Add proper logging and monitoring for source operations
+- [ ] Add huey dependency to pyproject.toml
+- [ ] Create TaskQueueProvider interface replacing JobQueueProvider
+- [ ] Implement NoTaskQueueProvider for testing (returns None)
+- [ ] Implement HueySQLiteTaskQueueProvider for development
+- [ ] Implement HueyRedisTaskQueueProvider for production
+- [ ] Update test profile to use NoTaskQueueProvider
+- [ ] Update development profile to use HueySQLiteTaskQueueProvider
+- [ ] Update production profile to use HueyRedisTaskQueueProvider
+- [ ] Remove old JobQueue/JobExecutor interfaces and implementations
+- [ ] Update registry to use TaskQueueProvider instead of JobQueueProvider
+- [ ] Update tests to use TaskQueueProvider instead of JobQueue
+- [ ] Verify all profiles work with new TaskQueueProvider system
 - [ ] PROMPT 17 COMPLETE
 
 ---
 
-## PROMPT 18: Job Processing Integration
+## PROMPT 18: Task Definition and Singleton Integration
 
 ### Context
-Implement the job processing system that handles content pipeline jobs asynchronously and integrates with the plugin system.
+Implement the two-phase initialization pattern for task definition with Huey and singleton integration. This creates the task registry that hosts will use for scheduling work.
 
 ### Task
 ```
-Create the job processing system that handles content pipeline jobs asynchronously and integrates with the plugin system, implementing the enhanced JobExecutor and JobHandler design.
+Implement task definition and singleton integration following the two-phase pattern: create TaskQueueProvider, create singletons, setup tasks, store task registry.
 
 Requirements:
-1. Implement JobResult dataclass and JobHandler Protocol:
-   - JobResult for structured job execution results
-   - JobHandler Protocol with job_types property
-   - Registration mechanism for job handlers
-2. Create JobExecutor implementation:
-   - Job routing to appropriate handlers
-   - Handler registration and management
-   - Error handling and retry logic
-3. Implement standard job handlers:
-   - fetch_content job handler (integrates with content fetchers)
-   - extract_content job handler (integrates with content extractors)
-   - store_content job handler
-   - cleanup_cache job handler
-4. Add plugin integration for job handlers:
-   - Job handler extension point
-   - Plugin-contributed job handlers
-   - Registration hooks
-5. Create job processing coordination:
-   - Worker lifecycle management
-   - Proper singleton access in workers
-   - State management in job processing
-6. Add comprehensive tests:
-   - Job handler registration and routing
-   - Job processing workflow
-   - Error handling and retries
-   - Plugin integration in workers
-   - Performance and concurrency
-7. Add job monitoring and observability
-8. Include graceful shutdown for workers
+1. Create Singletons dataclass:
+   - Hold all system singletons (plugin_manager, logger, configuration, etc.)
+   - Include task_queue (Huey instance or None)
+   - Include task registry dict for storing defined tasks
+2. Implement setup_tasks function:
+   - Take Huey instance and singletons as parameters
+   - Define Huey tasks using @huey.task() decorator
+   - Return dict mapping task names to task functions
+   - Handle None case (no tasks for synchronous execution)
+3. Create basic task definitions:
+   - fetch_content_task for content fetching
+   - extract_content_task for content extraction
+   - store_content_task for storage operations
+   - cleanup_cache_task for cache management
+4. Update application initialization:
+   - Implement two-phase startup sequence
+   - Create task registry and store in singletons
+   - Prepare for host integration (next prompt)
+5. Add comprehensive tests:
+   - Test task definition with different Huey configurations
+   - Verify singletons integration works correctly
+   - Test synchronous vs asynchronous task execution
+   - Verify task registry creation and storage
 
 Focus on:
-- JobHandler plugin integration
-- Job routing through the JobExecutor
-- Asynchronous job processing integration
-- Robust error handling and retry logic
-- Job processing performance and scalability
-- Comprehensive testing of async workflows
+- Clean two-phase initialization implementation
+- Proper task definition with Huey decorators
+- Singleton integration and task registry storage
+- Support for both sync and async execution modes
+- Foundation for host scheduling integration
 ```
 
 ### Task List
-- [ ] Create JobResult dataclass for structured job execution results
-- [ ] Implement JobHandler Protocol with job_types property
+- [ ] Create Singletons dataclass with all system components
+- [ ] Add task_queue field (Huey instance or None) to Singletons
+- [ ] Add tasks field (dict) to store task registry in Singletons
+- [ ] Implement setup_tasks function with Huey task definitions
+- [ ] Define fetch_content_task with proper Huey integration
+- [ ] Define extract_content_task with content processing
+- [ ] Define store_content_task for storage operations
+- [ ] Define cleanup_cache_task for cache management
+- [ ] Create application initialization with two-phase startup
+- [ ] Implement task registry creation and storage in singletons
+- [ ] Add comprehensive tests for task definition and singleton integration
+- [ ] Test both synchronous (None) and asynchronous (Huey) modes
+- [ ] PROMPT 18 COMPLETE
 - [ ] Create JobExecutor implementation with handler registration and routing
 - [ ] Implement fetch_content job handler with content fetcher integration
 - [ ] Add extract_content job handler with content extractor integration
@@ -1215,93 +1223,178 @@ Focus on:
 
 ---
 
-## PROMPT 19: Content Fetching Pipeline
+## PROMPT 19: ContentSource Implementation with Task Scheduling
 
 ### Context
-Implement the ContentFetcher extension point that transforms URLs and paths into content for extraction.
+Implement the ContentSource extension point with proper task scheduling integration. ContentSources identify resources to be processed and schedule them via the task system.
 
 ### Task
 ```
-Build the ContentFetcher extension point with proper URL/path handling and content retrieval capabilities.
+Implement ContentSource extension point with task scheduling capabilities, building on the task registry from the previous prompt.
 
 Requirements:
-1. Implement ContentFetcher support:
-   - Host implementation with extraction integration
-   - URL/path pattern matching and priority
-   - Content retrieval with proper error handling
-2. Create ContentFetcherHost functionality:
-   - extract_file() method for content processing
-   - Cache integration for fetched content
-   - Metadata enrichment during fetch
-3. Add fetcher selection logic in a ContentFetcherJobHandler:
-   - can_fetch() evaluation and prioritization
-   - First-match-wins with proper ordering
-   - Fallback to general fetchers
-4. Create comprehensive tests:
-   - Fetcher selection and prioritization
-   - Content retrieval and caching
-   - Cache integration
-5. Add example ContentFetcher implementations
-6. Include job processing integration
+1. Update ContentSourceHost implementation:
+   - Access singletons and task registry
+   - schedule_fetch() method using tasks from task registry
+   - schedule_next_run() for recurring operations
+   - Handle both sync (None) and async (Huey) execution
+2. Create comprehensive ContentSource support:
+   - Host implementation with task scheduling
+   - Configuration-driven resource discovery
+   - Source lifecycle management
+3. Implement example ContentSource:
+   - DirectoryWatcherContentSource for local file monitoring
+   - Configuration-based file discovery
+   - Proper integration with task scheduling
+4. Add ContentSource registration:
+   - Plugin registration hooks for ContentSource
+   - Host creation and lifecycle management
+   - Integration with plugin system manager
+5. Create comprehensive tests:
+   - ContentSource scheduling with task registry
+   - Both synchronous and asynchronous execution modes
+   - Configuration integration
+   - Lifecycle management and cleanup
+6. Add monitoring and error handling:
+   - Proper logging for source operations
+   - Error handling and recovery
+   - Resource cleanup
 
 Focus on:
-- Flexible fetcher selection and prioritization
-- Robust content retrieval with caching
-- Proper integration with extraction pipeline
-- Error handling and retry mechanisms
-- Comprehensive testing of fetch scenarios
+- Clean ContentSource implementation with task integration
+- Proper use of task registry for scheduling
+- Support for both sync and async execution modes
+- Configuration-driven operation
+- Comprehensive testing and validation
 ```
 
 ### Task List
-- [ ] Implement ContentFetcherHost with extraction integration
-- [ ] Add extract_file() method for processed content
-- [ ] Create fetcher selection logic with can_fetch() evaluation
-- [ ] Implement fetcher prioritization and first-match-wins behavior
-- [ ] Add cache integration for fetched content storage
-- [ ] Create comprehensive error handling and retry logic
-- [ ] Add example ContentFetcher implementations (file, HTTP, etc.)
-- [ ] Create comprehensive tests for fetcher selection and prioritization
-- [ ] Test content retrieval, caching, and error handling
-- [ ] Verify job processing integration works correctly
+- [ ] Update ContentSourceHost to access singletons and task registry
+- [ ] Implement schedule_fetch() method using task registry
+- [ ] Add schedule_next_run() for recurring source operations
+- [ ] Handle both synchronous (None) and asynchronous (Huey) execution modes
+- [ ] Create DirectoryWatcherContentSource example implementation
+- [ ] Add ContentSource registration hooks to plugin system
+- [ ] Implement ContentSource host creation and lifecycle management
+- [ ] Create comprehensive tests for ContentSource task scheduling
+- [ ] Test both sync and async execution modes with ContentSource
+- [ ] Verify configuration integration works for source parameters
+- [ ] Add proper logging and error handling for source operations
+- [ ] Test source lifecycle management and cleanup
 - [ ] PROMPT 19 COMPLETE
 
 ---
 
-## PROMPT 20: Content Extraction Pipeline
+## PROMPT 20: ContentFetcher Pipeline Implementation
 
 ### Context
-Implement the ContentExtractor extension point that processes fetched content and stores it in the system.
+Implement the ContentFetcher extension point that transforms URLs and paths into content, with proper task integration and content extraction scheduling.
 
 ### Task
 ```
-Build the ContentExtractor extension point with content processing, storage integration, and recursive extraction support.
+Build the ContentFetcher extension point with content retrieval capabilities and integration with the task system for extraction scheduling.
+
+Requirements:
+1. Implement ContentFetcher support:
+   - ContentFetcherHost with extraction scheduling
+   - URL/path pattern matching and priority
+   - Content retrieval with proper error handling
+2. Create ContentFetcherHost functionality:
+   - extract_file() method using task registry
+   - Cache integration for fetched content
+   - Metadata enrichment during fetch
+   - Support for both sync and async execution
+3. Implement fetch_content_task logic:
+   - Task implementation that calls appropriate ContentFetcher
+   - Fetcher selection using can_fetch() evaluation
+   - First-match-wins with proper ordering
+   - Integration with extract_content_task scheduling
+4. Create example ContentFetcher implementations:
+   - FileContentFetcher for local file access
+   - HTTPContentFetcher for web resources
+   - Proper can_fetch() implementation
+5. Add comprehensive tests:
+   - Fetcher selection and prioritization
+   - Content retrieval and caching
+   - Task integration and extraction scheduling
+   - Both sync and async execution modes
+6. Include monitoring and error handling:
+   - Proper logging for fetch operations
+   - Error handling and retry mechanisms
+   - Cache management
+
+Focus on:
+- ContentFetcher implementation with task integration
+- Proper fetcher selection and prioritization
+- Content retrieval with caching and extraction scheduling
+- Support for both sync and async execution modes
+- Comprehensive testing of fetch scenarios
+```
+
+### Task List
+- [ ] Implement ContentFetcherHost with task registry access
+- [ ] Add extract_file() method using task registry for extraction scheduling
+- [ ] Create fetcher selection logic with can_fetch() evaluation
+- [ ] Implement fetcher prioritization and first-match-wins behavior
+- [ ] Update fetch_content_task to use ContentFetcher selection
+- [ ] Add cache integration for fetched content storage
+- [ ] Create FileContentFetcher example implementation
+- [ ] Create HTTPContentFetcher example implementation
+- [ ] Add ContentFetcher registration hooks to plugin system
+- [ ] Create comprehensive tests for fetcher selection and prioritization
+- [ ] Test content retrieval, caching, and extraction scheduling
+- [ ] Verify both sync and async execution modes work correctly
+- [ ] PROMPT 20 COMPLETE
+
+---
+
+## PROMPT 21: ContentExtractor Pipeline Implementation
+
+### Context
+Implement the ContentExtractor extension point that processes fetched content and stores it in the system, with proper task integration and storage.
+
+### Task
+```
+Build the ContentExtractor extension point with content processing, storage integration, and recursive extraction support using the task system.
 
 Requirements:
 1. Implement ContentExtractor support:
-   - Host implementation with storage and cache access
+   - ContentExtractorHost with storage and cache access
    - MIME type and extension-based selection
    - Content processing with metadata handling
 2. Create ContentExtractorHost functionality:
    - Storage integration for processed content
    - Cache management for extracted content
-   - Recursive extraction support (extract_file calls)
-3. Add extractor selection logic in a ContentExtractorJobHandler:
-   - can_extract() evaluation with MIME types
+   - Recursive extraction using task registry
+   - Support for both sync and async execution
+3. Implement extract_content_task logic:
+   - Task implementation that calls appropriate ContentExtractor
+   - Extractor selection using can_extract() and MIME types
    - preferred_mime_types() prioritization
-   - Fallback extraction strategies
-4. Create comprehensive tests:
+   - Integration with storage operations
+4. Create example ContentExtractor implementations:
+   - PlainTextExtractor for text files
+   - HTMLExtractor for web content
+   - Proper can_extract() and preferred_mime_types() implementation
+5. Add storage integration:
+   - Update store_content_task implementation
+   - Proper metadata handling and storage
+   - Cache management and cleanup integration
+6. Create comprehensive tests:
    - Extractor selection and prioritization
    - Content processing and storage
    - Recursive extraction scenarios
-   - Cache and storage integration
-5. Add example ContentExtractor implementations
-6. Include metadata enrichment capabilities
+   - Both sync and async execution modes
+7. Include monitoring and error handling:
+   - Proper logging for extraction operations
+   - Error handling and recovery
+   - Storage and cache management
 
 Focus on:
+- ContentExtractor implementation with task integration
 - Flexible extractor selection by content type
 - Robust content processing with storage
 - Recursive extraction for complex content
-- Proper metadata handling and enrichment
 - Comprehensive testing of extraction scenarios
 ```
 
@@ -1309,129 +1402,81 @@ Focus on:
 - [ ] Implement ContentExtractorHost with storage and cache integration
 - [ ] Add extractor selection logic using can_extract() and MIME types
 - [ ] Create preferred_mime_types() prioritization system
-- [ ] Implement recursive extraction support via extract_file() calls
-- [ ] Add comprehensive storage integration for processed content
-- [ ] Create cache management for extracted content
-- [ ] Add example ContentExtractor implementations (text, HTML, etc.)
+- [ ] Update extract_content_task to use ContentExtractor selection
+- [ ] Implement recursive extraction support via task registry
+- [ ] Update store_content_task with proper storage integration
+- [ ] Create PlainTextExtractor example implementation
+- [ ] Create HTMLExtractor example implementation
+- [ ] Add ContentExtractor registration hooks to plugin system
 - [ ] Create comprehensive tests for extractor selection and processing
-- [ ] Test recursive extraction scenarios (ZIP files, etc.)
-- [ ] Verify storage and cache integration works correctly
-- [ ] PROMPT 20 COMPLETE
+- [ ] Test recursive extraction scenarios and storage integration
+- [ ] Verify both sync and async execution modes work correctly
+- [ ] PROMPT 21 COMPLETE
 
 ---
 
-## PROMPT 21: System Integration and End-to-End Testing
+## PROMPT 22: System Integration and End-to-End Testing
 
 ### Context
 Integrate all components into a complete working system and create comprehensive end-to-end tests that validate the entire content processing pipeline.
 
 ### Task
 ```
-Complete the system integration and create comprehensive end-to-end testing that validates the entire PAISE2 plugin system.
+Complete the system integration and create comprehensive end-to-end testing that validates the entire PAISE2 plugin system with proper task queue integration.
 
 Requirements:
 1. Create complete system integration:
-   - Main application entry point
+   - Main application entry point with two-phase initialization
    - Complete startup and shutdown procedures
-   - Integration of all subsystems
-   - Configuration-driven operation
-2. Add comprehensive end-to-end tests:
+   - Integration of all subsystems (TaskQueue, ContentSource, etc.)
+   - Configuration-driven operation with profiles
+2. Add LifecycleAction support:
+   - Worker management for Huey consumers
+   - Graceful startup and shutdown coordination
+   - Resource cleanup and management
+3. Create comprehensive end-to-end tests:
    - Complete content processing pipeline
-   - ContentSource → Job Queue → ContentFetcher → ContentExtractor → Storage
-   - Recursive extraction scenarios
-   - Error recovery and resumability
-3. Create system health and monitoring:
-   - System status reporting
+   - ContentSource → Task Queue → ContentFetcher → ContentExtractor → Storage
+   - Both synchronous (test) and asynchronous (Huey) execution
+   - Error recovery and task retry mechanisms
+4. Add system monitoring and observability:
+   - Task queue monitoring and metrics
+   - System health reporting
    - Performance metrics collection
    - Error reporting and alerting
-4. Add deployment and packaging:
-   - Proper CLI interface
-   - Configuration management
+5. Create deployment and operational tools:
+   - Worker process management
+   - Configuration management and validation
+   - CLI interface for system operations
    - Installation and setup procedures
-5. Include comprehensive documentation:
-   - System architecture overview
-   - Plugin development guide
-   - Configuration reference
-   - Troubleshooting guide
+6. Include comprehensive documentation:
+   - Complete system architecture overview
+   - Plugin development guide with task integration
+   - Configuration reference with all providers
+   - Troubleshooting guide for common issues
 
 Focus on:
-- Complete system integration and validation
-- End-to-end content processing pipeline
+- Complete two-phase system integration
+- End-to-end content processing pipeline with tasks
+- Worker lifecycle and process management
 - System health and observability
 - Production deployment readiness
-- Comprehensive documentation
+- Comprehensive documentation and guides
 ```
 
 ### Task List
-- [ ] Create main application entry point with full system integration
-- [ ] Implement complete startup and shutdown procedures
-- [ ] Add comprehensive end-to-end tests for content processing pipeline
-- [ ] Test complete flow: ContentSource → Fetcher → Extractor → Storage
-- [ ] Verify recursive extraction scenarios work end-to-end
-- [ ] Test error recovery and resumability across system restarts
-- [ ] Add system health monitoring and status reporting
-- [ ] Create performance metrics collection and monitoring
-- [ ] Implement proper CLI interface with configuration management
+- [ ] Create main application entry point with two-phase initialization
+- [ ] Implement complete startup sequence (TaskQueue → Singletons → Tasks → Extensions)
+- [ ] Add LifecycleAction support for worker management
+- [ ] Implement graceful shutdown procedures with resource cleanup
+- [ ] Create comprehensive end-to-end tests for content processing pipeline
+- [ ] Test complete flow: ContentSource → Task → Fetcher → Extractor → Storage
+- [ ] Verify both synchronous (test) and asynchronous (Huey) execution modes
+- [ ] Test error recovery, task retry, and resumability mechanisms
+- [ ] Add task queue monitoring and system health reporting
+- [ ] Create worker process management and lifecycle coordination
+- [ ] Implement CLI interface for system operations and management
 - [ ] Add comprehensive system documentation and plugin development guide
-- [ ] PROMPT 21 COMPLETE
-
----
-
-## PROMPT 22: Resumability and Production Polish
-
-### Context
-Add resumability features and production-ready polish to the system, ensuring it can handle interruptions gracefully and restart cleanly.
-
-### Task
-```
-Implement resumability features and add production-ready polish to create a robust, deployable system.
-
-Requirements:
-1. Complete resumability implementation:
-   - Processing state tracking in metadata
-   - Resume incomplete jobs on startup
-   - Idempotent operations throughout
-   - Cache-based deduplication
-2. Add production polish:
-   - Comprehensive error handling with isolation
-   - Resource management and cleanup
-   - Performance optimization
-   - Memory usage optimization
-3. Create operational tools:
-   - System administration utilities
-   - Backup and recovery procedures
-   - Performance tuning guidance
-   - Monitoring and alerting setup
-4. Add comprehensive testing:
-   - Resumability scenarios
-   - Long-running system testing
-   - Resource leak detection
-   - Performance benchmarking
-5. Final refactoring and cleanup:
-   - Code quality improvements
-   - Documentation completeness
-   - Remove duplicate/unused code
-   - Optimize for maintainability
-
-Focus on:
-- Complete resumability implementation
-- Production-ready error handling
-- System operational excellence
-- Performance and resource optimization
-- Final code quality and maintainability
-```
-
-### Task List
-- [ ] Implement processing state tracking in metadata for resumability
-- [ ] Add resume incomplete jobs logic on system startup
-- [ ] Make all operations idempotent for safe resumption
-- [ ] Implement cache-based deduplication to avoid duplicate work
-- [ ] Add comprehensive error handling with proper isolation
-- [ ] Create resource management and cleanup procedures
-- [ ] Add performance optimization throughout the system
-- [ ] Create system administration and operational utilities
-- [ ] Add comprehensive testing for resumability scenarios
-- [ ] Conduct final refactoring and cleanup for code quality
 - [ ] PROMPT 22 COMPLETE
 
 ---

@@ -27,8 +27,8 @@ Plugins can provide multiple extensions for one or more different extension poin
 8. **Simple load ordering**: Discovery order for plugins within same phase (can be enhanced later)
 9. **Immutable data objects**: All data structures use immutable patterns with copy/merge methods
 10. **Resumable operations**: System can restart and resume processing with minimal duplicate work
-11. **Job-based processing**: Most operations are handled through a job queue system
-12. **Pluggable infrastructure**: Job queues, state storage, and caches are provided by plugins
+11. **Task-based processing**: Most operations are handled through a task queue system
+12. **Pluggable infrastructure**: Task queues, state storage, and caches are provided by plugins
 
 ### Plugin Discovery
 
@@ -61,7 +61,7 @@ Load extension points that contribute to system singletons:
 ```python
 plugin_system.load_extension_point("ConfigurationProvider")
 plugin_system.load_extension_point("DataStorageProvider")
-plugin_system.load_extension_point("JobQueueProvider")
+plugin_system.load_extension_point("TaskQueueProvider")
 plugin_system.load_extension_point("StateStorageProvider")
 plugin_system.load_extension_point("CacheProvider")
 ```
@@ -70,7 +70,7 @@ plugin_system.load_extension_point("CacheProvider")
 Create singletons from loaded extensions:
 ```python
 configuration = create_configuration_from_providers()
-job_queue = create_job_queue_from_providers(configuration)
+task_queue = create_task_queue_from_providers(configuration)
 state_storage = create_state_storage_from_providers(configuration)
 cache = create_cache_from_providers(configuration)
 storage = create_storage_from_providers(configuration)
@@ -81,7 +81,7 @@ logger.replay_logs(bootstrap_logger.get_logs())  # Replay bootstrap logs
 #### Phase 4: Singleton-Using Extension Points
 Load remaining extension points with full singleton support:
 ```python
-singletons = Singletons(plugin_system, logger, configuration, storage, job_queue, state_storage, cache)
+singletons = Singletons(plugin_system, logger, configuration, storage, task_queue, state_storage, cache)
 # The ordering is important here; the exact mechanisms are illustrative.
 content_extractors = ContentExtractorHostCreator(singletons)
 content_fetchers = ContentFetcherHostCreator(singletons, content_extractors)
@@ -150,144 +150,227 @@ class DataStorage(Protocol):
     async def remove_items_by_url(self, host: DataStorageHost, url: str) -> List[CacheId]: ...
 ```
 
-#### JobQueueProvider
+#### TaskQueueProvider
 
-JobQueueProviders allow plugins to contribute job queue implementations.
+TaskQueueProviders configure Huey task queue instances for different deployment environments. The system uses [Huey](https://huey.readthedocs.io/) directly without additional abstraction layers.
 
 ```python
-from typing import Optional, List, Dict, Any
-from dataclasses import dataclass
-from datetime import datetime
+from huey import SqliteHuey, RedisHuey
 
-# Strongly typed job types
-JOB_TYPES = {
-    "fetch_content": "Fetch content from URL",
-    "extract_content": "Extract content using appropriate extractor",
-    "store_content": "Store extracted content",
-    "cleanup_cache": "Clean up cache entries"
-}
-
-class JobQueueProvider(Protocol):
-    def create_job_queue(self, configuration: Configuration, job_executor: JobExecutor | None = None) -> JobQueue: ...
-
-class JobQueue(Protocol):
-    async def enqueue(self, job_type: str, job_data: Dict[str, Any], priority: int = 0) -> JobId: ...
-    async def dequeue(self, worker_id: str) -> Optional[Job]: ...
-    async def complete(self, job_id: JobId, result: Dict[str, Any] = None) -> None: ...
-    async def fail(self, job_id: JobId, error: str, retry: bool = True) -> None: ...
-    async def get_incomplete_jobs(self) -> List[Job]: ...
-
-@dataclass(frozen=True)
-class Job:
-    job_id: JobId
-    job_type: str
-    job_data: Dict[str, Any]
-    priority: int
-    created_at: datetime
-    worker_id: Optional[str] = None
-
-class JobExecutor(Protocol):
-    async def execute_job(self, job: Job) -> Dict[str, Any]: ...
-    def register_handler(self, job_type: str, handler: Callable[[Dict[str, Any]], Awaitable[Dict[str, Any]]]) -> None: ...
-    def get_registered_types(self) -> List[str]: ...
+class TaskQueueProvider(Protocol):
+    def create_task_queue(self, configuration: Configuration) -> Huey: ...
 ```
 
-**Binary Data Handling:**
-Job queues must support storing and retrieving binary data (bytes) in `job_data` fields, as content fetchers need to pass `Content = bytes | str` to content extractors through the job queue. The reference SQLite implementation uses pickle serialization with protocol versioning to handle binary data transparently while maintaining security through trusted data assumptions.
+**Profile-Based Configuration:**
 
-**JobExecutor Architecture:**
-Job queue providers can optionally accept a `JobExecutor` for separating job storage from execution logic. Synchronous queues require a `JobExecutor` for immediate execution, while persistent queues use external workers and ignore the executor parameter. This enables flexible deployment patterns from development (immediate execution) to production (worker-based processing).
+Different profiles provide different Huey configurations:
 
-**JobExecutor Detailed Design:**
-The JobExecutor is responsible for routing jobs to appropriate handlers based on job type. It maintains a mapping between job types and their handlers, and delegates job execution to the registered handler for each job type.
+- **Test Profile**: `NoTaskQueueProvider` for synchronous execution in tests
+- **Development Profile**: `HueySQLiteTaskQueueProvider` with SQLite backend
+- **Production Profile**: `HueyRedisTaskQueueProvider` with Redis backend
+
+**Provider Implementations:**
 
 ```python
-@dataclass(frozen=True)
-class JobResult:
-    # A structured representation of job execution results
-    # This class will evolve as implementation progresses
-    status: str  # "success", "failure", "partial_success"
-    error: Optional[str] = None
-    # Additional fields will be added as needed for specific job types
+# For testing - synchronous execution
+class NoTaskQueueProvider(TaskQueueProvider):
+    def create_task_queue(self, configuration: Configuration) -> Huey:
+        # Return None for synchronous execution
+        return None
 
-class JobHandler(Protocol):
-    @property
-    def job_types(self) -> List[str]:
-        """Return a list of job types this handler can process."""
-        ...
+# For development - SQLite backend
+class HueySQLiteTaskQueueProvider(TaskQueueProvider):
+    def __init__(self, immediate: bool = False):
+        self.immediate = immediate
 
-    async def handle_job(self, job: Job) -> JobResult:
-        """Handle the execution of a job and return structured results."""
-        ...
+    def create_task_queue(self, configuration: Configuration) -> Huey:
+        db_path = configuration.get("task_queue.sqlite_path", "~/.local/share/paise2/tasks.db")
+        return SqliteHuey(
+            "paise2",
+            filename=Path(db_path).expanduser(),
+            immediate=self.immediate,
+            results=True,
+            utc=True
+        )
 
-class JobExecutor(Protocol):
-    def register_handler(self, handler: JobHandler) -> None:
-        """Register a handler for specific job types."""
-        ...
-
-    async def execute_job(self, job: Job) -> JobResult:
-        """Execute a job by routing it to the appropriate handler."""
-        ...
-
-    def get_registered_types(self) -> List[str]:
-        """Return a list of all registered job types."""
-        ...
+# For production - Redis backend
+class HueyRedisTaskQueueProvider(TaskQueueProvider):
+    def create_task_queue(self, configuration: Configuration) -> Huey:
+        return RedisHuey(
+            "paise2",
+            host=configuration.get("redis.host", "localhost"),
+            port=configuration.get("redis.port", 6379),
+            db=configuration.get("redis.db", 0),
+            immediate=False,
+            results=True
+        )
 ```
 
-**Plugin Integration:**
-Plugins can contribute JobHandlers through a dedicated extension point:
+**Task Definition:**
+
+Tasks are defined separately after singletons are created:
 
 ```python
-class Plugin:
-    @hookimpl
-    def register_job_handler(self, register: Callable[[JobHandler], None]) -> None:
-        """Register job handlers provided by this plugin."""
-        ...
+def setup_tasks(huey: Huey, singletons: Singletons) -> dict[str, Callable]:
+    """Define tasks with the provided Huey instance and singletons."""
+
+    if huey is None:
+        # No tasks for synchronous execution
+        return {}
+
+    @huey.task()
+    def fetch_content_task(url: str, metadata: dict | None = None):
+        """Fetch content using appropriate ContentFetcher plugin."""
+        fetcher_host = ContentFetcherHost(singletons)
+        fetchers = singletons.plugin_manager.get_registered_content_fetchers()
+
+        for fetcher in fetchers:
+            if await fetcher.can_fetch(fetcher_host, url):
+                content = await fetcher.fetch(fetcher_host, url)
+
+                # Enqueue extraction task
+                metadata_obj = Metadata.from_dict(metadata) if metadata else Metadata()
+                extract_content_task(content, metadata_obj.to_dict())
+
+                return {"status": "success", "content_length": len(content)}
+
+        return {"status": "error", "message": "No fetcher found for URL"}
+
+    @huey.task()
+    def extract_content_task(content: bytes | str, metadata: dict):
+        """Extract content using appropriate ContentExtractor plugin."""
+        extractor_host = ContentExtractorHost(singletons)
+        extractors = singletons.plugin_manager.get_registered_content_extractors()
+
+        metadata_obj = Metadata.from_dict(metadata)
+
+        for extractor in extractors:
+            if await extractor.can_extract(content, metadata_obj):
+                extracted = await extractor.extract(extractor_host, content, metadata_obj)
+
+                return {"status": "success", "extracted_items": len(extracted)}
+
+        return {"status": "error", "message": "No extractor found for content"}
+
+    @huey.task()
+    def store_content_task(content: dict, metadata: dict):
+        """Store processed content in the data storage."""
+        storage_host = DataStorageHost(singletons)
+        # Implementation details...
+        return {"status": "success"}
+
+    @huey.task()
+    def cleanup_cache_task(cache_ids: list[str]):
+        """Clean up specified cache entries."""
+        # Implementation details...
+        return {"status": "success", "cleaned": len(cache_ids)}
+
+    return {
+        "fetch_content": fetch_content_task,
+        "extract_content": extract_content_task,
+        "store_content": store_content_task,
+        "cleanup_cache": cleanup_cache_task,
+    }
 ```
 
-The JobExecutor is responsible for:
-1. Maintaining a mapping between job types and their handlers
-2. Routing jobs to the appropriate handler based on job type
-3. Providing a registration mechanism for handlers through the plugin system
-4. Handling execution control flow (errors, retries)
+**Host Integration:**
 
-Job handlers are responsible for:
-1. Declaring which job types they can handle
-2. Implementing the actual job processing logic
-3. Selecting appropriate fetchers, extractors, or other components needed for the job
-4. Returning structured results using the JobResult dataclass
-
-**Default Implementations Available:**
+Hosts enqueue tasks using the configured task queue:
 
 ```python
-# For development - executes jobs immediately without queuing
-class NoJobQueueProvider(JobQueueProvider):
-    def create_job_queue(self, configuration: Configuration, job_executor: JobExecutor | None = None) -> JobQueue:
-        if job_executor is None:
-            raise ValueError("SynchronousJobQueue requires a JobExecutor for immediate execution")
-        return SynchronousJobQueue(job_executor)
+class ContentSourceHost(BaseHost):
+    def __init__(self, singletons: Singletons):
+        super().__init__(singletons)
 
-class SynchronousJobQueue(JobQueue):
-    async def enqueue(self, job_type: str, job_data: Dict[str, Any], priority: int = 0) -> JobId:
-        # Execute immediately instead of queuing
-        await self._execute_job_immediately(job_type, job_data)
-        return f"sync-{uuid4()}"
+    def schedule_fetch(self, url: str, metadata: Optional[Metadata] = None):
+        """Schedule a content fetch task."""
+        if self._singletons.task_queue is None:
+            # Synchronous execution for testing
+            return self._fetch_synchronously(url, metadata)
 
-    async def dequeue(self, worker_id: str) -> Optional[Job]:
-        return None  # No jobs to dequeue since we execute immediately
+        # Enqueue async task
+        task_data = {"url": url, "metadata": metadata.to_dict() if metadata else None}
+        result = self._singletons.tasks["fetch_content"](**task_data)
 
-    async def complete(self, job_id: JobId, result: Dict[str, Any] = None):
-        pass  # No-op since jobs aren't persisted
+        self.logger.info(f"Enqueued fetch task for {url}")
+        return result.id if hasattr(result, 'id') else None
 
-    async def get_incomplete_jobs(self) -> List[Job]:
-        return []  # No incomplete jobs in synchronous mode
+class ContentFetcherHost(BaseHost):
+    def extract_file(self, content: Content, metadata: Metadata):
+        """Schedule content extraction task."""
+        if self._singletons.task_queue is None:
+            # Synchronous execution for testing
+            return self._extract_synchronously(content, metadata)
 
-# For production - SQLite-based persistent job queue
-class SQLiteJobQueueProvider(JobQueueProvider):
-    def create_job_queue(self, configuration: Configuration, job_executor: JobExecutor | None = None) -> JobQueue:
-        # SQLite queues use external workers, executor ignored
-        db_path = configuration.get("job_queue.sqlite_path", "jobs.db")
-        return SQLiteJobQueue(db_path)
+        # Enqueue async task
+        task_data = {"content": content, "metadata": metadata.to_dict()}
+        result = self._singletons.tasks["extract_content"](**task_data)
+
+        return result.id if hasattr(result, 'id') else None
+```
+
+**Worker Process:**
+
+Workers use the same application setup to ensure identical plugin configuration:
+
+```python
+# worker.py
+def run_worker(profile: str = "production"):
+    """Start a Huey worker process."""
+
+    # Initialize the same plugin system as main app
+    singletons = setup_application(profile)
+
+    # Start the Huey consumer
+    if singletons.task_queue:
+        singletons.task_queue.run_consumer()
+    else:
+        raise RuntimeError("No Huey instance available for worker")
+
+def setup_application(profile: str) -> Singletons:
+    """Common setup used by both main app and workers."""
+    plugin_manager = create_plugin_manager_from_profile(profile)
+    configuration = create_configuration_from_providers(plugin_manager)
+
+    # Create all singletons except task queue
+    storage = create_storage_from_providers(configuration)
+    cache = create_cache_from_providers(configuration)
+    state_storage = create_state_storage_from_providers(configuration)
+
+    # Create task queue (just Huey instance)
+    task_queue = create_task_queue_from_providers(configuration)
+
+    # Create singletons with incomplete task setup
+    singletons = Singletons(plugin_manager, logger, configuration, storage, task_queue, state_storage, cache)
+
+    # Setup tasks and store them in singletons
+    tasks = setup_tasks(task_queue, singletons)
+    singletons.tasks = tasks
+
+    return singletons
+
+if __name__ == "__main__":
+    run_worker()
+```
+
+**Configuration:**
+
+Task queue behavior is controlled through configuration:
+
+```yaml
+# Development configuration
+task_queue:
+  provider: "sqlite"
+  sqlite_path: "~/.local/share/paise2/dev_tasks.db"
+  immediate: true  # Execute tasks immediately for debugging
+
+# Production configuration
+task_queue:
+  provider: "redis"
+  redis:
+    host: "localhost"
+    port: 6379
+    db: 0
 ```
 
 #### StateStorageProvider
@@ -394,12 +477,38 @@ Fetchers are tried in order, with the first one to match wins. The most general 
 
 #### LifecycleAction
 
-LifecycleActions are informed about system events.
+LifecycleActions handle system startup and shutdown with full access to the configured system:
 
 ```python
 class LifecycleAction(Protocol):
-    async def on_start(self, host: LifecycleHost) -> None: ...
-    async def on_stop(self, host: LifecycleHost) -> None: ...
+    async def startup(self, host: LifecycleActionHost) -> None: ...
+    async def shutdown(self, host: LifecycleActionHost) -> None: ...
+```
+
+Example implementations:
+
+```python
+class WorkerLifecycleAction:
+    """Manages Huey worker processes."""
+
+    def __init__(self):
+        self.worker_processes = []
+
+    async def startup(self, host: LifecycleActionHost) -> None:
+        singletons = host.singletons
+        if singletons.task_queue.huey:
+            # Start background worker processes
+            import subprocess
+            worker_process = subprocess.Popen([
+                "python", "-m", "paise2.worker",
+                "--profile", singletons.configuration.get("profile", "production")
+            ])
+            self.worker_processes.append(worker_process)
+
+    async def shutdown(self, host: LifecycleActionHost) -> None:
+        for process in self.worker_processes:
+            process.terminate()
+            process.wait()
 ```
 
 ## Extension Registration
@@ -423,7 +532,7 @@ class Plugin:
     @hookimpl
     def register_data_storage_provider(self, register: Callable[[DataStorageProvider], None]) -> None: ...
     @hookimpl
-    def register_job_queue_provider(self, register: Callable[[JobQueueProvider], None]) -> None: ...
+    def register_task_queue_provider(self, register: Callable[[TaskQueueProvider], None]) -> None: ...
     @hookimpl
     def register_state_storage_provider(self, register: Callable[[StateStorageProvider], None]) -> None: ...
     @hookimpl
@@ -517,11 +626,11 @@ class StateManager:
 The typical flow through the plugin system is:
 
 1. A ContentSource plugin identifies resources and calls `schedule_fetch()`
-2. The ContentSourceHost creates a "fetch_content" job via the job queue
-3. A job worker picks up the fetch job and identifies an appropriate ContentFetcher
+2. The ContentSourceHost creates a "fetch_content" task via the task queue
+3. A task worker picks up the fetch task and identifies an appropriate ContentFetcher
 4. The ContentFetcher fetches the content and calls `extract_file()`
-5. The ContentFetcherHost creates an "extract_content" job via the job queue
-6. A job worker picks up the extract job and identifies an appropriate ContentExtractor
+5. The ContentFetcherHost creates an "extract_content" task via the task queue
+6. A task worker picks up the extract task and identifies an appropriate ContentExtractor
 7. The ContentExtractor processes the content and may:
    - Call `storage.add_item()` for extracted content
    - Call `host.extract_file()` for recursive extraction (e.g., files within ZIP archives)
@@ -541,15 +650,15 @@ For a ZIP file containing multiple documents:
 
 The host always goes through the full ContentExtractor selection process for recursive extractions.
 
-### Job-Based Processing
+### Task-Based Processing
 
-Most operations are handled through the job queue system:
+Most operations are handled through the task queue system:
 
 ```python
 # In ContentSourceHost
 def schedule_fetch(self, url: str, metadata: Optional[Metadata] = None):
-    job_data = {"url": url, "metadata": metadata}
-    await self._job_queue.enqueue("fetch_content", job_data, priority=1)
+    task_data = {"url": url, "metadata": metadata}
+    await self._task_queue.enqueue("fetch_content", task_data, priority=1)
 
 # In ContentFetcherHost
 def extract_file(self, content: Content, metadata: Metadata):
@@ -970,16 +1079,16 @@ def test_configuration_merging():
     assert merged["scalar"] == "second"  # Last wins
     assert merged["list"] == [1, 2, 3, 4]  # Lists concatenated
 
-# Test job queue functionality
-def test_job_queue():
-    queue = SynchronousJobQueue()  # For testing
+# Test task queue functionality
+def test_task_queue():
+    queue = SynchronousTaskQueue()  # For testing
 
-    job_id = await queue.enqueue("test_job", {"data": "test"})
-    assert job_id is not None
+    task_id = await queue.enqueue("test_task", {"data": "test"})
+    assert task_id is not None
 
-    job = await queue.dequeue("test_worker")
-    # In synchronous mode, jobs are executed immediately
-    assert job is None
+    task = await queue.dequeue("test_worker")
+    # In synchronous mode, tasks are executed immediately
+    assert task is None
 ```
 
 ### Integration Tests
@@ -1042,26 +1151,26 @@ async def test_resumable_operations():
     await plugin_system2.start()
 
     # Check that incomplete jobs are resumed
-    incomplete_jobs = await test_job_queue.get_incomplete_jobs()
-    assert len(incomplete_jobs) == 0  # Should be resumed and completed
+    incomplete_tasks = await test_task_queue.get_incomplete_tasks()
+    assert len(incomplete_tasks) == 0  # Should be resumed and completed
 
-# Test job processing
-async def test_job_processing():
-    job_queue = SQLiteJobQueue(":memory:")
+# Test task processing
+async def test_task_processing():
+    task_queue = HueySQLiteTaskQueue(":memory:")
 
-    # Enqueue a job
-    job_id = await job_queue.enqueue("fetch_content", {"url": "test://example.com"})
+    # Enqueue a task
+    task_id = await task_queue.enqueue("fetch_content", {"url": "test://example.com"})
 
     # Dequeue and process
-    job = await job_queue.dequeue("test_worker")
-    assert job is not None
-    assert job.job_type == "fetch_content"
+    task = await task_queue.dequeue("test_worker")
+    assert task is not None
+    assert task.task_type == "fetch_content"
 
-    # Complete the job
-    await job_queue.complete(job.job_id, {"status": "success"})
+    # Complete the task
+    await task_queue.complete(task.task_id, {"status": "success"})
 
-    # Verify no incomplete jobs remain
-    incomplete = await job_queue.get_incomplete_jobs()
+    # Verify no incomplete tasks remain
+    incomplete = await task_queue.get_incomplete_tasks()
     assert len(incomplete) == 0
 ```
 
@@ -1081,16 +1190,16 @@ def test_test_content_source():
     await source.start_source(host)
     assert len(host.scheduled_fetches) > 0
 
-def test_job_queue_providers():
+def test_task_queue_providers():
     # Test synchronous provider
-    sync_provider = NoJobQueueProvider()
-    sync_queue = sync_provider.create_job_queue({})
-    assert isinstance(sync_queue, SynchronousJobQueue)
+    sync_provider = NoTaskQueueProvider()
+    sync_queue = sync_provider.create_task_queue({})
+    assert isinstance(sync_queue, SynchronousTaskQueue)
 
-    # Test SQLite provider
-    sqlite_provider = SQLiteJobQueueProvider()
-    sqlite_queue = sqlite_provider.create_job_queue({"job_queue.sqlite_path": ":memory:"})
-    assert isinstance(sqlite_queue, SQLiteJobQueue)
+    # Test Huey SQLite provider
+    sqlite_provider = HueySQLiteTaskQueueProvider()
+    sqlite_queue = sqlite_provider.create_task_queue({"task_queue.sqlite_path": ":memory:"})
+    assert isinstance(sqlite_queue, HueyTaskQueueAdapter)
 ```
 
 ### Host Interface Tests
@@ -1101,7 +1210,7 @@ def test_content_extractor_host():
         storage=mock_storage,
         logger=mock_logger,
         cache=mock_cache,
-        job_queue=mock_job_queue
+        task_queue=mock_task_queue
     )
     assert host.storage is not None
     assert host.logger is not None
@@ -1173,7 +1282,7 @@ Focus on building the plugin system infrastructure with test plugins:
 2. **Essential Extension Points**:
    - ConfigurationProvider (Phase 2)
    - DataStorageProvider (Phase 2)
-   - JobQueueProvider (Phase 2)
+   - TaskQueueProvider (Phase 2)
    - StateStorageProvider (Phase 2)
    - CacheProvider (Phase 2)
    - ContentExtractor (Phase 4)
@@ -1185,11 +1294,12 @@ Focus on building the plugin system infrastructure with test plugins:
    - Specialized hosts for each extension type
    - State management integration
    - Configuration access
-   - Job queue integration
+   - Task queue integration
 
 4. **Default Providers**:
-   - NoJobQueueProvider (synchronous execution for development)
-   - SQLiteJobQueueProvider (persistent job queue for production)
+   - NoTaskQueueProvider (synchronous execution for development)
+   - HueySQLiteTaskQueueProvider (persistent task queue for development)
+   - HueyRedisTaskQueueProvider (distributed task queue for production)
    - FileConfigurationProvider
    - Basic storage, state, and cache providers
 
@@ -1213,12 +1323,13 @@ Focus on building the plugin system infrastructure with test plugins:
 - End-to-end flow: ContentSource → Job Queue → ContentFetcher → Job Queue → ContentExtractor → DataStorage
 - Plugin state is properly partitioned
 - Configuration merging works correctly
-- Job queue can handle both synchronous and asynchronous processing
-- System can restart and resume operations via job queue
+- Task queue can handle both synchronous and asynchronous processing
+- System can restart and resume operations via task queue
 
 ### Development Progression
-1. **Start with NoJobQueueProvider**: Everything runs synchronously, easier to debug
-2. **Switch to SQLiteJobQueueProvider**: Add persistence and async processing
+1. **Start with NoTaskQueueProvider**: Everything runs synchronously, easier to debug
+2. **Switch to HueySQLiteTaskQueueProvider**: Add persistence and async processing
+3. **Scale to HueyRedisTaskQueueProvider**: Add distributed task processing for production
 3. **Add real plugin implementations**: Replace test plugins with actual functionality
 4. **Add error isolation**: Implement Phase 2 error handling
 5. **Add monitoring and management**: Job queue status, plugin performance, etc.
