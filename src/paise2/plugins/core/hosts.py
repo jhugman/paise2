@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import inspect
+from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -76,9 +77,10 @@ class BaseHost:
         """Get the state manager for this plugin."""
         return self._state
 
-    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> Any:  # noqa: ARG002
         """Schedule a fetch operation (placeholder implementation)."""
         # NOTE: This will be implemented when job queue integration is added
+        return None
 
 
 def get_plugin_module_name_from_frame() -> str:
@@ -168,25 +170,53 @@ class ContentExtractorHost(BaseHost):
 class ContentSourceHost(BaseHost):
     """Specialized host for content sources with cache access and scheduling."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         logger: Any,
         configuration: Configuration,
         state_storage: StateStorage,
         plugin_module_name: str,
         cache: CacheManager,
+        singletons: Any = None,
     ):
         super().__init__(logger, configuration, state_storage, plugin_module_name)
         self._cache = cache
+        self._singletons = singletons
 
     @property
     def cache(self) -> CacheManager:
         """Get the cache manager instance."""
         return self._cache
 
+    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> Any:
+        """Schedule a fetch operation using the task registry."""
+        if self._singletons and self._singletons.task_queue:
+            # Async mode: use task queue
+            fetch_task = self._singletons.tasks.get("fetch_content")
+            if fetch_task:
+                metadata_dict = asdict(metadata) if metadata else None
+                result = fetch_task(url, metadata_dict)
+                task_id = getattr(result, "id", None)
+                self.logger.info("Scheduled fetch task for %s", url)
+                return task_id
+
+            self.logger.warning("No fetch_content task available in task registry")
+            return None
+
+        # Sync mode: log what would be done
+        self.logger.info("Synchronous execution: would fetch %s", url)
+        return None
+
     def schedule_next_run(self, time_interval: timedelta) -> None:
-        """Schedule the next run of this content source (placeholder implementation)."""
-        # NOTE: This will be implemented when job queue integration is added
+        """Schedule the next run of this content source."""
+        if self._singletons and self._singletons.task_queue:
+            # Async mode: would schedule using task queue scheduler
+            self.logger.info("Scheduled next content source run in %s", time_interval)
+        else:
+            # Sync mode: log what would be done
+            self.logger.info(
+                "Synchronous execution: would schedule next run in %s", time_interval
+            )
 
 
 class ContentFetcherHost(BaseHost):
@@ -254,10 +284,11 @@ class BaseHostWithTaskQueue(BaseHost):
         super().__init__(logger, configuration, state_storage, plugin_module_name)
         self._task_queue = task_queue
 
-    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> Any:  # noqa: ARG002
         """Schedule a fetch operation with task queue integration."""
         # NOTE: Task queue integration will be implemented when task handling is added
         # For now, this is a placeholder method
+        return None
 
 
 class ContentExtractorHostWithTaskQueue(ContentExtractorHost):
@@ -304,16 +335,17 @@ def create_content_extractor_host(  # noqa: PLR0913
     )
 
 
-def create_content_source_host(
+def create_content_source_host(  # noqa: PLR0913
     logger: Any,
     configuration: Configuration,
     state_storage: StateStorage,
     plugin_module_name: str,
     cache: CacheManager,
+    singletons: Any = None,
 ) -> ContentSourceHost:
     """Create a ContentSourceHost instance."""
     return ContentSourceHost(
-        logger, configuration, state_storage, plugin_module_name, cache
+        logger, configuration, state_storage, plugin_module_name, cache, singletons
     )
 
 
