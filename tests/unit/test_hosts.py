@@ -361,6 +361,7 @@ class TestSpecializedHosts:
             state_storage=self.mock_state_storage,
             plugin_module_name=self.plugin_module_name,
             cache=self.mock_cache,
+            data_storage=self.mock_data_storage,
         )
 
         # Verify it implements the ContentSourceHost protocol
@@ -382,6 +383,7 @@ class TestSpecializedHosts:
             state_storage=self.mock_state_storage,
             plugin_module_name=self.plugin_module_name,
             cache=self.mock_cache,
+            data_storage=self.mock_data_storage,
         )
 
         # Test schedule_next_run method
@@ -506,6 +508,7 @@ class TestHostFactoriesSpecialized:
             state_storage=self.mock_state_storage,
             plugin_module_name=self.plugin_module_name,
             cache=self.mock_cache,
+            data_storage=self.mock_data_storage,
         )
 
         assert isinstance(host, ContentSourceHost)

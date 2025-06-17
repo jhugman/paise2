@@ -177,16 +177,23 @@ class ContentSourceHost(BaseHost):
         state_storage: StateStorage,
         plugin_module_name: str,
         cache: CacheManager,
+        data_storage: DataStorage,
         singletons: Any = None,
     ):
         super().__init__(logger, configuration, state_storage, plugin_module_name)
         self._cache = cache
+        self._data_storage = data_storage
         self._singletons = singletons
 
     @property
     def cache(self) -> CacheManager:
         """Get the cache manager instance."""
         return self._cache
+
+    @property
+    def data_storage(self) -> DataStorage:
+        """Get the data storage instance."""
+        return self._data_storage
 
     def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> Any:
         """Schedule a fetch operation using the task registry."""
@@ -341,11 +348,18 @@ def create_content_source_host(  # noqa: PLR0913
     state_storage: StateStorage,
     plugin_module_name: str,
     cache: CacheManager,
+    data_storage: DataStorage,
     singletons: Any = None,
 ) -> ContentSourceHost:
     """Create a ContentSourceHost instance."""
     return ContentSourceHost(
-        logger, configuration, state_storage, plugin_module_name, cache, singletons
+        logger,
+        configuration,
+        state_storage,
+        plugin_module_name,
+        cache,
+        data_storage,
+        singletons,
     )
 
 

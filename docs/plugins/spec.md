@@ -143,7 +143,7 @@ class DataStorage(Protocol):
     async def add_item(self, host: DataStorageHost, content: Content, metadata: Metadata) -> ItemId: ...
     async def update_item(self, host: DataStorageHost, item_id: ItemId, content: Content) -> None: ...
     async def update_metadata(self, host: DataStorageHost, item_id: ItemId, metadata: Metadata) -> None: ...
-    async def find_item_id(self, host: DataStorageHost, metadata: Metadata) -> Optional[ItemId]: ...
+    async def find_item_id(self, host: BaseHost, metadata: Metadata) -> Optional[ItemId]: ...  # Accepts any BaseHost for read-only operations
     async def find_item(self, item_id: ItemId) -> Metadata: ...
     async def remove_item(self, host: DataStorageHost, item_id: ItemId) -> Optional[CacheId]: ...
     async def remove_items_by_metadata(self, host: DataStorageHost, metadata: Metadata) -> List[CacheId]: ...
@@ -282,7 +282,7 @@ class ContentSourceHost(BaseHost):
     def __init__(self, singletons: Singletons):
         super().__init__(singletons)
 
-    def schedule_fetch(self, url: str, metadata: Optional[Metadata] = None):
+    def schedule_fetch(self, url: str, metadata: Metadata | None = None):
         """Schedule a content fetch task."""
         if self._singletons.task_queue is None:
             # Synchronous execution for testing
@@ -447,6 +447,8 @@ class ContentExtractor(Protocol):
 
 ContentSources extract lists of files or URLs from human-writable local configuration. They take app configuration (YAML files) and derive a list of files to fetch, using the host to schedule those files for fetching.
 
+ContentSources have read-only access to the data storage through the host to check for existing content and avoid duplicate fetching. This enables efficient resumable operations where the system can restart without re-processing content that already exists.
+
 Examples:
 - Take directory lists from config and set up file watchers
 - Read Firefox places.db and schedule bookmark fetching
@@ -566,7 +568,7 @@ class BaseHost:
     @property
     def state(self) -> StateManager: ...
 
-    def schedule_fetch(self, url: str, metadata: Optional[Metadata] = None) -> None: ...
+    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None: ...
 ```
 
 ### Specialized Host Interfaces
@@ -583,6 +585,8 @@ class ContentExtractorHost(BaseHost):
 class ContentSourceHost(BaseHost):
     @property
     def cache(self) -> ExtensionCacheManager: ...
+    @property
+    def data_storage(self) -> DataStorage: ...
     def schedule_next_run(self, time_interval: timedelta) -> None: ...
 
 class ContentFetcherHost(BaseHost):
@@ -872,7 +876,7 @@ The system supports stopping and starting with minimal duplicated work:
 
 1. **Processing state tracking**: Add `processing_state` field to Metadata ("pending", "fetching", "extracting", "completed")
 2. **Job-based resumption**: On startup, query job queue for incomplete jobs and resume processing
-3. **Cache-based deduplication**: Before fetching, check if content already exists in cache
+3. **Storage-based deduplication**: ContentSources check data storage before scheduling fetches to avoid duplicates
 4. **Idempotent operations**: Make storage operations safe to repeat (add_item checks for existing items first)
 5. **Automatic cleanup**: Cache cleanup happens automatically when items are removed from storage
 
@@ -960,14 +964,43 @@ CacheId = Any  # To be defined by implementation
 ## Content Deduplication Strategy
 
 ### Fetch-Level Deduplication
-- Check if URL/path has already been processed before fetching
-- Host provides `has_been_fetched(url_or_path)` to ContentSources
-- Saves bandwidth and processing time
+- ContentSources can check if content already exists before scheduling fetches
+- ContentSourceHost provides `data_storage` property for read-only access to check existing content
+- ContentSources use `await host.data_storage.find_item_id(host, metadata)` to check for duplicates
+- Saves bandwidth and processing time by avoiding duplicate fetches
 
 ### Storage-Level Deduplication
 - DataStorage handles content-level deduplication
 - Can detect same content from different URLs/paths
 - Different storage providers may have different strategies
+
+### ContentSource Duplicate Detection Pattern
+```python
+async def start_source(self, host: ContentSourceHost) -> None:
+    """Example showing duplicate detection pattern."""
+    content_items = await self.discover_content(host)
+
+    scheduled_count = 0
+    skipped_count = 0
+
+    for url, metadata in content_items:
+        # Check if content already exists in data storage
+        try:
+            existing_item_id = await host.data_storage.find_item_id(host, metadata)
+            if existing_item_id:
+                host.logger.debug("Skipping %s - already exists with ID %s", url, existing_item_id)
+                skipped_count += 1
+                continue
+        except Exception as e:
+            host.logger.warning("Failed to check for existing content: %s", e)
+            # Continue with scheduling if duplicate check fails
+
+        # Schedule for fetching
+        host.schedule_fetch(url, metadata)
+        scheduled_count += 1
+
+    host.logger.info("Scheduled %d files, skipped %d duplicates", scheduled_count, skipped_count)
+```
 
 ## Implementation Requirements
 

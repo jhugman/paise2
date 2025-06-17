@@ -236,7 +236,7 @@ class DataStorage(Protocol):
         ...
 
     async def find_item_id(
-        self, host: DataStorageHost, metadata: Metadata
+        self, host: BaseHost, metadata: Metadata
     ) -> ItemId | None:
         """
         Find an item by its metadata.
@@ -821,8 +821,8 @@ class ContentSourceHost(BaseHost, Protocol):
     """
     Host interface for content sources.
 
-    Provides content sources with cache access and scheduling
-    capabilities for periodic operations.
+    Provides content sources with cache access, data storage access,
+    and scheduling capabilities for periodic operations.
     """
 
     @property
@@ -832,6 +832,16 @@ class ContentSourceHost(BaseHost, Protocol):
 
         Returns:
             CacheManager instance
+        """
+        ...
+
+    @property
+    def data_storage(self) -> DataStorage:
+        """
+        Data storage for checking existing content.
+
+        Returns:
+            DataStorage instance
         """
         ...
 

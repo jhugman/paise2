@@ -36,21 +36,25 @@ class MockLogger:
     def __init__(self) -> None:
         self.logs: list[tuple[str, str]] = []
 
-    def debug(self, message: str) -> None:
+    def debug(self, message: str, *args: object) -> None:
         """Log a debug message."""
-        self.logs.append(("DEBUG", message))
+        formatted_message = message % args if args else message
+        self.logs.append(("DEBUG", formatted_message))
 
-    def info(self, message: str) -> None:
+    def info(self, message: str, *args: object) -> None:
         """Log an info message."""
-        self.logs.append(("INFO", message))
+        formatted_message = message % args if args else message
+        self.logs.append(("INFO", formatted_message))
 
-    def warning(self, message: str) -> None:
+    def warning(self, message: str, *args: object) -> None:
         """Log a warning message."""
-        self.logs.append(("WARNING", message))
+        formatted_message = message % args if args else message
+        self.logs.append(("WARNING", formatted_message))
 
-    def error(self, message: str) -> None:
+    def error(self, message: str, *args: object) -> None:
         """Log an error message."""
-        self.logs.append(("ERROR", message))
+        formatted_message = message % args if args else message
+        self.logs.append(("ERROR", formatted_message))
 
     def clear(self) -> None:
         """Clear all logged messages."""

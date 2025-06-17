@@ -356,6 +356,10 @@ class TestHostInterfaces:
             def cache(self) -> CacheManager:
                 return MockCacheManager()
 
+            @property
+            def data_storage(self) -> DataStorage:
+                return MockDataStorage()
+
             def schedule_next_run(self, time_interval: timedelta) -> None:
                 pass
 
@@ -559,6 +563,10 @@ class TestProtocolInheritance:
 
             @property
             def storage(self) -> DataStorage:
+                return MockDataStorage()
+
+            @property
+            def data_storage(self) -> DataStorage:
                 return MockDataStorage()
 
             @property

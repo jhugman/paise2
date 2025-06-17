@@ -7,15 +7,10 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import pluggy
-
 from paise2.models import Metadata
 
 if TYPE_CHECKING:
-    from paise2.plugins.core.interfaces import ContentSource, ContentSourceHost
-
-# Plugin registration hookimpl decorator
-hookimpl = pluggy.HookimplMarker("paise2")
+    from paise2.plugins.core.interfaces import ContentSourceHost
 
 
 class DirectoryWatcherContentSource:
@@ -94,15 +89,37 @@ class DirectoryWatcherContentSource:
         # Discover and schedule all content
         content_items = await self.discover_content(host)
 
+        scheduled_count = 0
+        skipped_count = 0
+
         for url, metadata in content_items:
+            # Check if content already exists in data storage
+            try:
+                existing_item_id = await host.data_storage.find_item_id(host, metadata)
+                if existing_item_id:
+                    host.logger.debug(
+                        "Skipping %s - already exists with ID %s", url, existing_item_id
+                    )
+                    skipped_count += 1
+                    continue
+            except Exception as e:
+                # Log error but continue processing
+                host.logger.warning(
+                    "Error checking existing content for %s: %s", url, str(e)
+                )
+
             # Schedule each discovered file for fetching
             task_id: str | None = host.schedule_fetch(url, metadata)  # type: ignore[func-returns-value]
             if task_id:
                 host.logger.debug("Scheduled fetch for %s (task: %s)", url, task_id)
+                scheduled_count += 1
 
         host.logger.info(
-            "DirectoryWatcherContentSource started monitoring %s",
+            "DirectoryWatcherContentSource started monitoring %s - "
+            "scheduled %d new files, skipped %d existing files",
             self.watch_directory,
+            scheduled_count,
+            skipped_count,
         )
 
     async def stop_source(self, host: ContentSourceHost) -> None:
@@ -115,16 +132,3 @@ class DirectoryWatcherContentSource:
     def get_configuration_id(self) -> str:
         """Get configuration identifier for this source."""
         return "directory_watcher"
-
-
-@hookimpl
-def register_content_source_providers() -> list[ContentSource]:
-    """Register DirectoryWatcherContentSource with the plugin system."""
-    # Example configuration-based instance
-    # In practice, this would read from configuration
-    default_watcher = DirectoryWatcherContentSource(
-        watch_directory="~/Documents",
-        file_extensions=[".txt", ".md", ".pdf", ".doc", ".docx"],
-    )
-
-    return [default_watcher]

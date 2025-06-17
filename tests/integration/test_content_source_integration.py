@@ -73,6 +73,7 @@ class TestContentSourceIntegration:
                     state_storage=singletons.state_storage,
                     plugin_module_name="test.integration",
                     cache=singletons.cache,
+                    data_storage=singletons.data_storage,
                     singletons=singletons,
                 )
 
@@ -125,6 +126,7 @@ class TestContentSourceIntegration:
                     state_storage=singletons.state_storage,
                     plugin_module_name="test.integration",
                     cache=singletons.cache,
+                    data_storage=singletons.data_storage,
                     singletons=singletons,
                 )
 
@@ -196,6 +198,7 @@ class TestContentSourceIntegration:
                 state_storage=singletons.state_storage,
                 plugin_module_name="test.integration",
                 cache=singletons.cache,
+                data_storage=singletons.data_storage,
                 singletons=singletons,
             )
 
