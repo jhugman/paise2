@@ -8,7 +8,9 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    List,
     Protocol,
+    Union,
     runtime_checkable,
 )
 
@@ -21,6 +23,12 @@ if TYPE_CHECKING:
 
 # Type aliases for clarity
 ConfigurationDict = Dict[str, Any]
+# Configuration values can be strings, numbers, booleans, lists, or nested dicts
+ConfigurationValue = Union[str, int, float, bool, List[Any], Dict[str, Any]]
+# Serializable values for state storage (JSON-compatible)
+SerializableValue = Union[str, int, float, bool, List[Any], Dict[str, Any], None]
+# Type for values that can be formatted in log messages
+LogFormattableValue = Union[str, int, float, bool, None]
 
 
 @dataclass(frozen=True)
@@ -47,7 +55,9 @@ class Configuration(Protocol):
     support for typed lookups and default values.
     """
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(
+        self, key: str, default: ConfigurationValue | None = None
+    ) -> ConfigurationValue | None:
         """
         Get a configuration value by key.
 
@@ -72,7 +82,9 @@ class Configuration(Protocol):
         """
         ...
 
-    def addition(self, key: str, default: Any = None) -> Any:
+    def addition(
+        self, key: str, default: ConfigurationValue | None = None
+    ) -> ConfigurationValue | None:
         """
         Get the additions at the key path from the last configuration reload.
 
@@ -85,7 +97,9 @@ class Configuration(Protocol):
         """
         ...
 
-    def removal(self, key: str, default: Any = None) -> Any:
+    def removal(
+        self, key: str, default: ConfigurationValue | None = None
+    ) -> ConfigurationValue | None:
         """
         Get the removals at the key path from the last configuration reload.
 
@@ -360,7 +374,9 @@ class StateStorage(Protocol):
     by plugin module name for isolation.
     """
 
-    def store(self, partition_key: str, key: str, value: Any, version: int = 1) -> None:
+    def store(
+        self, partition_key: str, key: str, value: SerializableValue, version: int = 1
+    ) -> None:
         """
         Store a value with versioning support.
 
@@ -372,7 +388,9 @@ class StateStorage(Protocol):
         """
         ...
 
-    def get(self, partition_key: str, key: str, default: Any = None) -> Any:
+    def get(
+        self, partition_key: str, key: str, default: SerializableValue = None
+    ) -> SerializableValue:
         """
         Retrieve a stored value.
 
@@ -388,7 +406,7 @@ class StateStorage(Protocol):
 
     def get_versioned_state(
         self, partition_key: str, older_than_version: int
-    ) -> list[tuple[str, Any, int]]:
+    ) -> list[tuple[str, SerializableValue, int]]:
         """
         Get all state entries older than a specific version.
 
@@ -401,7 +419,9 @@ class StateStorage(Protocol):
         """
         ...
 
-    def get_all_keys_with_value(self, partition_key: str, value: Any) -> list[str]:
+    def get_all_keys_with_value(
+        self, partition_key: str, value: SerializableValue
+    ) -> list[str]:
         """
         Find all keys that have a specific value.
 
@@ -424,7 +444,7 @@ class StateManager(Protocol):
     providing a clean interface for plugins to manage their state.
     """
 
-    def store(self, key: str, value: Any, version: int = 1) -> None:
+    def store(self, key: str, value: SerializableValue, version: int = 1) -> None:
         """
         Store a value in the plugin's partition.
 
@@ -435,7 +455,7 @@ class StateManager(Protocol):
         """
         ...
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: str, default: SerializableValue = None) -> SerializableValue:
         """
         Retrieve a value from the plugin's partition.
 
@@ -450,7 +470,7 @@ class StateManager(Protocol):
 
     def get_versioned_state(
         self, older_than_version: int
-    ) -> list[tuple[str, Any, int]]:
+    ) -> list[tuple[str, SerializableValue, int]]:
         """
         Get all state entries older than a specific version.
 
@@ -462,7 +482,7 @@ class StateManager(Protocol):
         """
         ...
 
-    def get_all_keys_with_value(self, value: Any) -> list[str]:
+    def get_all_keys_with_value(self, value: SerializableValue) -> list[str]:
         """
         Find all keys that have a specific value.
 
@@ -665,7 +685,7 @@ class ContentFetcher(Protocol):
     using scheme, URL patterns, or extension-specific methods.
     """
 
-    def can_fetch(self, host: ContentFetcherHost, url: str) -> bool:
+    def can_fetch(self, url: str) -> bool:
         """
         Determine if this fetcher can handle the given URL.
 
@@ -763,7 +783,7 @@ class BaseHost(Protocol):
         """
         ...
 
-    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+    def schedule_fetch(self, url: str) -> None:
         """
         Schedule content to be fetched.
 
@@ -904,7 +924,8 @@ class LifecycleHost(BaseHost, Protocol):
 class Logger(Protocol):
     """Protocol for logger implementations."""
 
-    def debug(self, message: str, *args: Any) -> None: ...
-    def info(self, message: str, *args: Any) -> None: ...
-    def warning(self, message: str, *args: Any) -> None: ...
-    def error(self, message: str, *args: Any) -> None: ...
+    def debug(self, message: str, *args: LogFormattableValue) -> None: ...
+    def info(self, message: str, *args: LogFormattableValue) -> None: ...
+    def warning(self, message: str, *args: LogFormattableValue) -> None: ...
+    def error(self, message: str, *args: LogFormattableValue) -> None: ...
+    def exception(self, message: str, *args: LogFormattableValue) -> None: ...

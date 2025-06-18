@@ -185,10 +185,9 @@ class PluginCompatibilityChecker:
                 import inspect
 
                 can_fetch_sig = inspect.signature(fetcher.can_fetch)
-                if len(can_fetch_sig.parameters) != 2:
+                if len(can_fetch_sig.parameters) != 1:
                     issues.append(
-                        f"Fetcher {i}: can_fetch should take exactly 2 parameters "
-                        f"(host, url)"
+                        f"Fetcher {i}: can_fetch should take exactly 1 parameter (url)"
                     )
 
                 fetch_sig = inspect.signature(fetcher.fetch)

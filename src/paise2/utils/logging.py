@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Union
+
+# Type for values that can be formatted in log messages
+LogFormattableValue = Union[str, int, float, bool, None]
 
 
 class SimpleInMemoryLogger:
@@ -20,25 +23,34 @@ class SimpleInMemoryLogger:
     def __init__(self) -> None:
         self._logs: list[tuple[datetime, str, str]] = []
 
-    def debug(self, message: str, *args: Any) -> None:
+    def debug(self, message: str, *args: LogFormattableValue) -> None:
         """Log a debug message."""
         formatted_message = message % args if args else message
         self._logs.append((datetime.now(), "DEBUG", formatted_message))
 
-    def info(self, message: str, *args: Any) -> None:
+    def info(self, message: str, *args: LogFormattableValue) -> None:
         """Log an info message."""
         formatted_message = message % args if args else message
         self._logs.append((datetime.now(), "INFO", formatted_message))
 
-    def warning(self, message: str, *args: Any) -> None:
+    def warning(self, message: str, *args: LogFormattableValue) -> None:
         """Log a warning message."""
         formatted_message = message % args if args else message
         self._logs.append((datetime.now(), "WARNING", formatted_message))
 
-    def error(self, message: str, *args: Any) -> None:
+    def error(self, message: str, *args: LogFormattableValue) -> None:
         """Log an error message."""
         formatted_message = message % args if args else message
         self._logs.append((datetime.now(), "ERROR", formatted_message))
+
+    def exception(self, message: str, *args: LogFormattableValue) -> None:
+        """Log an exception with traceback."""
+        import traceback
+
+        formatted_message = message % args if args else message
+        traceback_info = traceback.format_exc()
+        full_message = f"{formatted_message}\n{traceback_info}"
+        self._logs.append((datetime.now(), "ERROR", full_message))
 
     def get_logs(self) -> list[tuple[datetime, str, str]]:
         """Get all captured log messages.

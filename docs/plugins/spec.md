@@ -225,7 +225,7 @@ def setup_tasks(huey: Huey, singletons: Singletons) -> dict[str, Callable]:
         fetchers = singletons.plugin_manager.get_registered_content_fetchers()
 
         for fetcher in fetchers:
-            if await fetcher.can_fetch(fetcher_host, url):
+            if await fetcher.can_fetch(url):
                 content = await fetcher.fetch(fetcher_host, url)
 
                 # Enqueue extraction task
@@ -471,7 +471,7 @@ Examples:
 
 ```python
 class ContentFetcher(Protocol):
-    def can_fetch(self, host: ContentFetcherHost, url: str) -> bool: ...
+    def can_fetch(self, url: str) -> bool: ...
     async def fetch(self, host: ContentFetcherHost, url: str) -> None: ...
 ```
 

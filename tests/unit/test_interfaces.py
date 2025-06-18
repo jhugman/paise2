@@ -225,7 +225,7 @@ class TestPhase4Protocols:
         """Test that ContentFetcher protocol is properly defined."""
 
         class TestContentFetcher:
-            def can_fetch(self, host: ContentFetcherHost, url: str) -> bool:
+            def can_fetch(self, url: str) -> bool:
                 return True
 
             async def fetch(self, host: ContentFetcherHost, url: str) -> None:
@@ -283,9 +283,7 @@ class TestHostInterfaces:
             def state(self) -> StateManager:
                 return TestStateManager()
 
-            def schedule_fetch(
-                self, url: str, metadata: Metadata | None = None
-            ) -> None:
+            def schedule_fetch(self, url: str) -> None:
                 pass
 
         host = TestBaseHost()
@@ -309,9 +307,7 @@ class TestHostInterfaces:
             def state(self) -> StateManager:
                 return MockStateManager()
 
-            def schedule_fetch(
-                self, url: str, metadata: Metadata | None = None
-            ) -> None:
+            def schedule_fetch(self, url: str) -> None:
                 pass
 
             @property
@@ -347,9 +343,7 @@ class TestHostInterfaces:
             def state(self) -> StateManager:
                 return MockStateManager()
 
-            def schedule_fetch(
-                self, url: str, metadata: Metadata | None = None
-            ) -> None:
+            def schedule_fetch(self, url: str) -> None:
                 pass
 
             @property
@@ -384,9 +378,7 @@ class TestHostInterfaces:
             def state(self) -> StateManager:
                 return MockStateManager()
 
-            def schedule_fetch(
-                self, url: str, metadata: Metadata | None = None
-            ) -> None:
+            def schedule_fetch(self, url: str) -> None:
                 pass
 
             @property
@@ -432,9 +424,7 @@ class TestHostInterfaces:
             def state(self) -> StateManager:
                 return TestStateManager()
 
-            def schedule_fetch(
-                self, url: str, metadata: Metadata | None = None
-            ) -> None:
+            def schedule_fetch(self, url: str) -> None:
                 pass
 
         host = TestDataStorageHost()
@@ -472,9 +462,7 @@ class TestHostInterfaces:
             def state(self) -> StateManager:
                 return TestStateManager()
 
-            def schedule_fetch(
-                self, url: str, metadata: Metadata | None = None
-            ) -> None:
+            def schedule_fetch(self, url: str) -> None:
                 pass
 
         host = TestLifecycleHost()
@@ -556,9 +544,7 @@ class TestProtocolInheritance:
             def state(self) -> StateManager:
                 return TestStateManager()
 
-            def schedule_fetch(
-                self, url: str, metadata: Metadata | None = None
-            ) -> None:
+            def schedule_fetch(self, url: str) -> None:
                 pass
 
             @property
@@ -625,9 +611,7 @@ class TestAsyncProtocolMethods:
             def state(self) -> StateManager:
                 return TestStateManager()
 
-            def schedule_fetch(
-                self, url: str, metadata: Metadata | None = None
-            ) -> None:
+            def schedule_fetch(self, url: str) -> None:
                 pass
 
         class TestDataStorage:
@@ -709,9 +693,7 @@ class TestAsyncProtocolMethods:
             def state(self) -> StateManager:
                 return MockStateManager()
 
-            def schedule_fetch(
-                self, url: str, metadata: Metadata | None = None
-            ) -> None:
+            def schedule_fetch(self, url: str) -> None:
                 pass
 
             @property

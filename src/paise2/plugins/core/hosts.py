@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import inspect
-from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -19,6 +18,7 @@ if TYPE_CHECKING:
         StateManager,
         StateStorage,
     )
+    from paise2.plugins.core.startup import Singletons
     from paise2.plugins.core.tasks import TaskQueue
 
 
@@ -79,7 +79,7 @@ class BaseHost:
         """Get the state manager for this plugin."""
         return self._state
 
-    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> Any:  # noqa: ARG002
+    def schedule_fetch(self, url: str) -> Any:  # noqa: ARG002
         """Schedule a fetch operation (placeholder implementation)."""
         # NOTE: This will be implemented when job queue integration is added
         return None
@@ -149,10 +149,12 @@ class ContentExtractorHost(BaseHost):
         plugin_module_name: str,
         data_storage: DataStorage,
         cache: CacheManager,
+        task_queue: TaskQueue,
     ):
         super().__init__(logger, configuration, state_storage, plugin_module_name)
         self._data_storage = data_storage
         self._cache = cache
+        self._task_queue = task_queue
 
     @property
     def storage(self) -> DataStorage:
@@ -165,8 +167,16 @@ class ContentExtractorHost(BaseHost):
         return self._cache
 
     def extract_file(self, content: Content, metadata: Metadata) -> None:
-        """Request extraction of nested content (placeholder implementation)."""
-        # NOTE: This will be implemented when job queue integration is added
+        """Request extraction of nested content using task registry for recursive extraction."""  # noqa: E501
+
+        # Async mode: schedule extraction task using task registry
+        result = self._task_queue.extract_content(content=content, metadata=metadata)
+
+        # Log task scheduling
+        if hasattr(result, "id"):
+            self.logger.info("Scheduled recursive extraction task %s", result.id)
+        else:
+            self.logger.info("Scheduled recursive extraction task (sync mode)")
 
 
 class ContentSourceHost(BaseHost):
@@ -180,7 +190,7 @@ class ContentSourceHost(BaseHost):
         plugin_module_name: str,
         cache: CacheManager,
         data_storage: DataStorage,
-        singletons: Any = None,
+        singletons: Singletons | None = None,
     ):
         super().__init__(logger, configuration, state_storage, plugin_module_name)
         self._cache = cache
@@ -197,12 +207,11 @@ class ContentSourceHost(BaseHost):
         """Get the data storage instance."""
         return self._data_storage
 
-    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> Any:
+    def schedule_fetch(self, url: str) -> Any:
         """Schedule a fetch operation using the task registry."""
         if self._singletons and self._singletons.task_queue:
             # Async mode: use task queue
-            metadata_dict = asdict(metadata) if metadata else None
-            result = self._singletons.task_queue.fetch_content(url, metadata_dict)
+            result = self._singletons.task_queue.fetch_content(url)
             task_id = getattr(result, "id", None)
             self.logger.info("Scheduled fetch task for %s", url)
             return task_id
@@ -301,12 +310,12 @@ class BaseHostWithTaskQueue(BaseHost):
         configuration: Configuration,
         state_storage: StateStorage,
         plugin_module_name: str,
-        task_queue: Any,
+        task_queue: TaskQueue,
     ):
         super().__init__(logger, configuration, state_storage, plugin_module_name)
         self._task_queue = task_queue
 
-    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> Any:  # noqa: ARG002
+    def schedule_fetch(self, url: str) -> Any:  # noqa: ARG002
         """Schedule a fetch operation with task queue integration."""
         # NOTE: Task queue integration will be implemented when task handling is added
         # For now, this is a placeholder method
@@ -324,7 +333,7 @@ class ContentExtractorHostWithTaskQueue(ContentExtractorHost):
         plugin_module_name: str,
         data_storage: DataStorage,
         cache: CacheManager,
-        task_queue: Any,
+        task_queue: TaskQueue,
     ):
         super().__init__(
             logger,
@@ -333,8 +342,8 @@ class ContentExtractorHostWithTaskQueue(ContentExtractorHost):
             plugin_module_name,
             data_storage,
             cache,
+            task_queue,
         )
-        self._task_queue = task_queue
 
     def extract_file(self, content: Content, metadata: Metadata) -> None:
         """Request extraction of nested content with job queue integration."""
@@ -350,10 +359,36 @@ def create_content_extractor_host(  # noqa: PLR0913
     plugin_module_name: str,
     data_storage: DataStorage,
     cache: CacheManager,
+    task_queue: TaskQueue,
 ) -> ContentExtractorHost:
     """Create a ContentExtractorHost instance."""
     return ContentExtractorHost(
-        logger, configuration, state_storage, plugin_module_name, data_storage, cache
+        logger,
+        configuration,
+        state_storage,
+        plugin_module_name,
+        data_storage,
+        cache,
+        task_queue,
+    )
+
+
+# Factory functions for specialized hosts
+def create_content_extractor_host_from_singletons(
+    singletons: Singletons,
+    plugin_module_name: str,
+) -> ContentExtractorHost:
+    """Create a ContentExtractorHost instance."""
+    task_queue = singletons.task_queue
+    assert task_queue is not None
+    return create_content_extractor_host(
+        logger=singletons.logger,
+        configuration=singletons.configuration,
+        state_storage=singletons.state_storage,
+        plugin_module_name=plugin_module_name,
+        data_storage=singletons.data_storage,
+        cache=singletons.cache,
+        task_queue=task_queue,
     )
 
 
@@ -364,7 +399,7 @@ def create_content_source_host(  # noqa: PLR0913
     plugin_module_name: str,
     cache: CacheManager,
     data_storage: DataStorage,
-    singletons: Any = None,
+    singletons: Singletons | None = None,
 ) -> ContentSourceHost:
     """Create a ContentSourceHost instance."""
     return ContentSourceHost(
@@ -378,17 +413,46 @@ def create_content_source_host(  # noqa: PLR0913
     )
 
 
+def create_content_fetcher_host_from_singletons(
+    singletons: Singletons,
+    plugin_module_name: str,
+) -> ContentFetcherHost:
+    task_queue = singletons.task_queue
+    assert task_queue is not None
+    return create_content_fetcher_host(
+        plugin_module_name=plugin_module_name,
+        logger=singletons.logger,
+        configuration=singletons.configuration,
+        state_storage=singletons.state_storage,
+        cache=singletons.cache,
+        task_queue=task_queue,
+    )
+
+
 def create_content_fetcher_host(  # noqa: PLR0913
     logger: Logger,
     configuration: Configuration,
     state_storage: StateStorage,
     plugin_module_name: str,
     cache: CacheManager,
-    task_queue: TaskQueue | None = None,
+    task_queue: TaskQueue,
 ) -> ContentFetcherHost:
     """Create a ContentFetcherHost instance."""
     return ContentFetcherHost(
         logger, configuration, state_storage, plugin_module_name, cache, task_queue
+    )
+
+
+def create_data_storage_host_from_singleton(
+    singletons: Singletons,
+    plugin_module_name: str,
+) -> DataStorageHost:
+    """Create a DataStorageHost instance."""
+    return create_data_storage_host(
+        logger=singletons.logger,
+        configuration=singletons.configuration,
+        state_storage=singletons.state_storage,
+        plugin_module_name=plugin_module_name,
     )
 
 

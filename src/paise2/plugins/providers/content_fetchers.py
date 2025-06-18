@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class FileContentFetcher:
     """ContentFetcher implementation for local file access."""
 
-    def can_fetch(self, host: ContentFetcherHost, url: str) -> bool:  # noqa: ARG002
+    def can_fetch(self, url: str) -> bool:
         """
         Determine if this fetcher can handle the given URL.
 
@@ -58,7 +58,7 @@ class FileContentFetcher:
         file_path = Path(parsed.path) if parsed.scheme == "file" else Path(url)
 
         if not file_path.exists() or not file_path.is_file():
-            host.logger.error("File not found: %s", file_path)
+            host.logger.error("File not found: %s", str(file_path))
             return
 
         try:
@@ -79,14 +79,14 @@ class FileContentFetcher:
                 modified_at=None,  # Could add file stats here
             )
 
-            host.logger.info("Fetched content from file: %s", file_path)
+            host.logger.info("Fetched content from file: %s", str(file_path))
 
             # Pass to extraction
             host.extract_file(content, metadata)
 
         except (OSError, UnicodeDecodeError) as e:
             # Note: Using logger.error as interface doesn't guarantee exception method
-            host.logger.error("Error reading file %s: %s", file_path, e)  # noqa: TRY400
+            host.logger.error("Error reading file %s: %s", str(file_path), str(e))  # noqa: TRY400
 
     def _is_binary_file(self, file_path: Path) -> bool:
         """Check if file is binary by examining first few bytes."""
@@ -120,7 +120,7 @@ class FileContentFetcher:
 class HTTPContentFetcher:
     """ContentFetcher implementation for HTTP/HTTPS resources."""
 
-    def can_fetch(self, host: ContentFetcherHost, url: str) -> bool:  # noqa: ARG002
+    def can_fetch(self, url: str) -> bool:
         """
         Determine if this fetcher can handle the given URL.
 
@@ -166,4 +166,4 @@ class HTTPContentFetcher:
         except Exception as e:
             # Note: Using logger.error instead of logger.exception
             # since interface doesn't guarantee exception method
-            host.logger.error("Error fetching from %s: %s", url, e)  # noqa: TRY400
+            host.logger.error("Error fetching from %s: %s", url, str(e))  # noqa: TRY400

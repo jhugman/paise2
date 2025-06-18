@@ -83,7 +83,7 @@ class TestMockPluginIntegration:
         assert len(mock_host.scheduled_urls) == 3
 
         # Check that the URLs are what we expect
-        scheduled_urls = [url for url, _ in mock_host.scheduled_urls]
+        scheduled_urls = [url for (url,) in mock_host.scheduled_urls]
         assert "test://document1.txt" in scheduled_urls
         assert "test://document2.txt" in scheduled_urls
         assert "test://document3.txt" in scheduled_urls
@@ -97,11 +97,11 @@ class TestMockPluginIntegration:
         fetcher = MockContentFetcher()
 
         # Test can_fetch logic
-        mock_host = MockContentFetcherHost()
-        assert fetcher.can_fetch(mock_host, "test://document.txt")
-        assert not fetcher.can_fetch(mock_host, "http://example.com")
+        assert fetcher.can_fetch("test://document.txt")
+        assert not fetcher.can_fetch("http://example.com")
 
         # Test fetching
+        mock_host = MockContentFetcherHost()
         await fetcher.fetch(mock_host, "test://document1.txt")
 
         # Should have stored fetched content
@@ -289,7 +289,6 @@ class TestMockPluginDocumentation:
 
         # Content fetcher generates different content for different URLs
         fetcher = MockContentFetcher()
-        mock_host = MockContentFetcherHost()
-        assert fetcher.can_fetch(mock_host, "test://document1.txt")
-        assert fetcher.can_fetch(mock_host, "test://document2.txt")
-        assert not fetcher.can_fetch(mock_host, "http://example.com")
+        assert fetcher.can_fetch("test://document1.txt")
+        assert fetcher.can_fetch("test://document2.txt")
+        assert not fetcher.can_fetch("http://example.com")

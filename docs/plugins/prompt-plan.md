@@ -1449,19 +1449,19 @@ Focus on:
 ```
 
 ### Task List
-- [ ] Implement ContentExtractorHost with storage and cache integration
-- [ ] Add extractor selection logic using can_extract() and MIME types
-- [ ] Create preferred_mime_types() prioritization system
-- [ ] Update extract_content_task to use ContentExtractor selection
-- [ ] Implement recursive extraction support via task registry
-- [ ] Update store_content_task with proper storage integration
-- [ ] Create PlainTextExtractor example implementation
-- [ ] Create HTMLExtractor example implementation
-- [ ] Add ContentExtractor registration hooks to plugin system
-- [ ] Create comprehensive tests for extractor selection and processing
-- [ ] Test recursive extraction scenarios and storage integration
-- [ ] Verify both sync and async execution modes work correctly
-- [ ] PROMPT 21 COMPLETE
+- [x] Implement ContentExtractorHost with storage and cache integration
+- [x] Add extractor selection logic using can_extract() and MIME types
+- [x] Create preferred_mime_types() prioritization system
+- [x] Update extract_content_task to use ContentExtractor selection
+- [x] Implement recursive extraction support via task registry
+- [x] Update store_content_task with proper storage integration
+- [x] Create PlainTextExtractor example implementation
+- [x] Create HTMLExtractor example implementation
+- [x] Add ContentExtractor registration hooks to plugin system
+- [x] Create comprehensive tests for extractor selection and processing
+- [x] Test recursive extraction scenarios and storage integration
+- [x] Verify both sync and async execution modes work correctly
+- [x] **PROMPT 21 COMPLETE** ✅
 
 ---
 

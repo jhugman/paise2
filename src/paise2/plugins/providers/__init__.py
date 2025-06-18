@@ -15,6 +15,7 @@ from .cache import (
     MemoryCacheManager,
     MemoryCacheProvider,
 )
+from .content_extractors import HTMLExtractor, PlainTextExtractor
 from .content_fetchers import FileContentFetcher, HTTPContentFetcher
 from .task_queue import (
     HueyRedisTaskQueueProvider,
@@ -23,9 +24,19 @@ from .task_queue import (
 )
 
 if TYPE_CHECKING:
-    from paise2.plugins.core.interfaces import ContentFetcher
+    from paise2.plugins.core.interfaces import ContentExtractor, ContentFetcher
 
 hookimpl = pluggy.HookimplMarker("paise2")
+
+
+@hookimpl
+def register_content_extractor(register: Callable[[ContentExtractor], None]) -> None:
+    """Register PlainTextExtractor and HTMLExtractor plugins."""
+    # Register PlainTextExtractor
+    register(PlainTextExtractor())
+
+    # Register HTMLExtractor
+    register(HTMLExtractor())
 
 
 @hookimpl
@@ -44,10 +55,12 @@ __all__ = [
     "FileCacheManager",
     "FileCacheProvider",
     "FileContentFetcher",
+    "HTMLExtractor",
     "HTTPContentFetcher",
     "HueyRedisTaskQueueProvider",
     "HueySQLiteTaskQueueProvider",
     "MemoryCacheManager",
     "MemoryCacheProvider",
     "NoTaskQueueProvider",
+    "PlainTextExtractor",
 ]

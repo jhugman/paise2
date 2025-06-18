@@ -307,6 +307,7 @@ class TestStartupManager:
         stored_config = state_storage.get("_system.configuration", "last_merged")
 
         assert stored_config is not None
+        assert isinstance(stored_config, dict)
         assert "app" in stored_config
         assert stored_config["app"]["version"] == 2.0
 

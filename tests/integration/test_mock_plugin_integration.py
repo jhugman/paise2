@@ -167,12 +167,9 @@ class TestMockPluginSystemIntegration:
             assert len(fetchers) > 0
 
             mock_fetcher = fetchers[0]
-            # Create a mock host to test can_fetch
-            from unittest.mock import Mock
 
-            mock_host = Mock()
-            assert mock_fetcher.can_fetch(mock_host, "test://document.txt")
-            assert not mock_fetcher.can_fetch(mock_host, "http://example.com")
+            assert mock_fetcher.can_fetch("test://document.txt")
+            assert not mock_fetcher.can_fetch("http://example.com")
 
         finally:
             plugin_system.stop()
@@ -373,10 +370,7 @@ class TestMockPluginDocumentationValue:
 
         # Content Fetcher
         fetcher = MockContentFetcher()
-        from unittest.mock import Mock
-
-        mock_host = Mock()
-        assert isinstance(fetcher.can_fetch(mock_host, "test://doc.txt"), bool)
+        assert isinstance(fetcher.can_fetch("test://doc.txt"), bool)
 
     def test_mock_plugins_show_realistic_functionality(self) -> None:
         """Test that mock plugins provide realistic but simple examples."""
@@ -390,10 +384,6 @@ class TestMockPluginDocumentationValue:
 
         # Content Fetcher shows realistic URL handling
         fetcher = MockContentFetcher()
-        from unittest.mock import Mock
 
-        mock_host = Mock()
-        assert fetcher.can_fetch(
-            mock_host, "test://document.txt"
-        )  # Handles test scheme
-        assert not fetcher.can_fetch(mock_host, "http://example.com")  # Rejects others
+        assert fetcher.can_fetch("test://document.txt")  # Handles test scheme
+        assert not fetcher.can_fetch("http://example.com")  # Rejects others

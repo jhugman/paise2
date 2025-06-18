@@ -40,7 +40,7 @@ class DirectoryWatcherContentSource:
 
         if not self.watch_directory.exists():
             host.logger.warning(
-                "Watch directory does not exist: %s", self.watch_directory
+                "Watch directory does not exist: %s", str(self.watch_directory)
             )
             return content_items
 
@@ -73,13 +73,15 @@ class DirectoryWatcherContentSource:
                     content_items.append((file_url, metadata))
 
             host.logger.info(
-                "Discovered %d files in %s", len(content_items), self.watch_directory
+                "Discovered %d files in %s",
+                len(content_items),
+                str(self.watch_directory),
             )
 
         except (OSError, PermissionError) as e:
             # Use error logging since Logger protocol doesn't include exception
             host.logger.error(  # noqa: TRY400
-                "Error discovering content in %s: %s", self.watch_directory, str(e)
+                "Error discovering content in %s: %s", str(self.watch_directory), str(e)
             )
 
         return content_items
@@ -109,7 +111,7 @@ class DirectoryWatcherContentSource:
                 )
 
             # Schedule each discovered file for fetching
-            task_id: str | None = host.schedule_fetch(url, metadata)  # type: ignore[func-returns-value]
+            task_id: str | None = host.schedule_fetch(url)  # type: ignore[func-returns-value]
             if task_id:
                 host.logger.debug("Scheduled fetch for %s (task: %s)", url, task_id)
                 scheduled_count += 1
@@ -117,7 +119,7 @@ class DirectoryWatcherContentSource:
         host.logger.info(
             "DirectoryWatcherContentSource started monitoring %s - "
             "scheduled %d new files, skipped %d existing files",
-            self.watch_directory,
+            str(self.watch_directory),
             scheduled_count,
             skipped_count,
         )
@@ -126,7 +128,7 @@ class DirectoryWatcherContentSource:
         """Stop the content source and clean up any resources."""
         host.logger.info(
             "DirectoryWatcherContentSource stopped monitoring %s",
-            self.watch_directory,
+            str(self.watch_directory),
         )
 
     def get_configuration_id(self) -> str:

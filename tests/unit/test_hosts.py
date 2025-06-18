@@ -19,6 +19,7 @@ from paise2.plugins.core.interfaces import (
     StateManager,
     StateStorage,
 )
+from paise2.plugins.core.tasks import TaskQueue
 from paise2.utils.logging import SimpleInMemoryLogger
 from tests.fixtures import MockConfiguration
 
@@ -300,6 +301,7 @@ class TestSpecializedHosts:
         self.mock_state_storage = Mock(spec=StateStorage)
         self.mock_cache = Mock(spec=CacheManager)
         self.mock_data_storage = Mock(spec=DataStorage)
+        self.mock_task_queue = Mock(spec=TaskQueue)
         self.plugin_module_name = "paise2.plugins.test_plugin"
 
     def test_content_extractor_host_creation(self) -> None:
@@ -315,6 +317,7 @@ class TestSpecializedHosts:
             plugin_module_name=self.plugin_module_name,
             data_storage=self.mock_data_storage,
             cache=self.mock_cache,
+            task_queue=self.mock_task_queue,
         )
 
         # Verify it implements the ContentExtractorHost protocol
@@ -338,6 +341,7 @@ class TestSpecializedHosts:
             plugin_module_name=self.plugin_module_name,
             data_storage=self.mock_data_storage,
             cache=self.mock_cache,
+            task_queue=self.mock_task_queue,
         )
 
         # Test extract_file method
@@ -482,6 +486,7 @@ class TestHostFactoriesSpecialized:
         self.mock_cache = Mock(spec=CacheManager)
         self.mock_data_storage = Mock(spec=DataStorage)
         self.plugin_module_name = "paise2.plugins.test_plugin"
+        self.mock_task_queue = Mock(spec=TaskQueue)
 
     def test_create_content_extractor_host_factory(self) -> None:
         """Test ContentExtractorHost creation through factory function."""
@@ -494,6 +499,7 @@ class TestHostFactoriesSpecialized:
             plugin_module_name=self.plugin_module_name,
             data_storage=self.mock_data_storage,
             cache=self.mock_cache,
+            task_queue=self.mock_task_queue,
         )
 
         assert isinstance(host, ContentExtractorHost)
@@ -526,7 +532,7 @@ class TestHostFactoriesSpecialized:
             state_storage=self.mock_state_storage,
             plugin_module_name=self.plugin_module_name,
             cache=self.mock_cache,
-            task_queue=None,
+            task_queue=self.mock_task_queue,
         )
 
         assert isinstance(host, ContentFetcherHost)
@@ -570,6 +576,7 @@ class TestJobSchedulingIntegration:
         self.mock_cache = Mock(spec=CacheManager)
         self.mock_data_storage = Mock(spec=DataStorage)
         self.mock_job_queue = Mock()
+        self.mock_task_queue = Mock(spec=TaskQueue)
         self.plugin_module_name = "paise2.plugins.test_plugin"
 
     def test_base_host_schedule_fetch_with_task_queue(self) -> None:
@@ -581,14 +588,13 @@ class TestJobSchedulingIntegration:
             configuration=self.mock_configuration,
             state_storage=self.mock_state_storage,
             plugin_module_name=self.plugin_module_name,
-            task_queue=None,  # Use None for synchronous execution
+            task_queue=self.mock_task_queue,
         )
 
         test_url = "http://example.com/file.txt"
-        test_metadata = Metadata(source_url=test_url, mime_type="text/plain")
 
         # Test schedule_fetch method
-        host.schedule_fetch(test_url, test_metadata)
+        host.schedule_fetch(test_url)
 
         # For now, verify job queue is not called since it's a placeholder
         # Job queue integration will be implemented in later prompts
@@ -605,7 +611,7 @@ class TestJobSchedulingIntegration:
             plugin_module_name=self.plugin_module_name,
             data_storage=self.mock_data_storage,
             cache=self.mock_cache,
-            task_queue=None,  # Use None for synchronous execution
+            task_queue=self.mock_task_queue,
         )
 
         test_content = "nested content"

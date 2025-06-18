@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         ContentSourceHost,
         DataStorage,
         LifecycleHost,
+        LogFormattableValue,
         StateManager,
         StateStorage,
     )
@@ -36,23 +37,28 @@ class MockLogger:
     def __init__(self) -> None:
         self.logs: list[tuple[str, str]] = []
 
-    def debug(self, message: str, *args: object) -> None:
+    def debug(self, message: str, *args: LogFormattableValue) -> None:
         """Log a debug message."""
         formatted_message = message % args if args else message
         self.logs.append(("DEBUG", formatted_message))
 
-    def info(self, message: str, *args: object) -> None:
+    def info(self, message: str, *args: LogFormattableValue) -> None:
         """Log an info message."""
         formatted_message = message % args if args else message
         self.logs.append(("INFO", formatted_message))
 
-    def warning(self, message: str, *args: object) -> None:
+    def warning(self, message: str, *args: LogFormattableValue) -> None:
         """Log a warning message."""
         formatted_message = message % args if args else message
         self.logs.append(("WARNING", formatted_message))
 
-    def error(self, message: str, *args: object) -> None:
+    def error(self, message: str, *args: LogFormattableValue) -> None:
         """Log an error message."""
+        formatted_message = message % args if args else message
+        self.logs.append(("ERROR", formatted_message))
+
+    def exception(self, message: str, *args: LogFormattableValue) -> None:
+        """Log an exception with traceback."""
         formatted_message = message % args if args else message
         self.logs.append(("ERROR", formatted_message))
 
@@ -145,12 +151,7 @@ class MockContentSource:
         ]
 
         for url in test_urls:
-            metadata = Metadata(
-                source_url=url,
-                title=f"Test Document: {url}",
-                processing_state="pending",
-            )
-            host.schedule_fetch(url, metadata)
+            host.schedule_fetch(url)
 
     async def stop_source(self, host: ContentSourceHost) -> None:
         """Stop the test content source."""
@@ -161,7 +162,7 @@ class MockContentSource:
 class MockContentFetcher:
     """Test content fetcher for plugin registration testing."""
 
-    def can_fetch(self, host: ContentFetcherHost, url: str) -> bool:
+    def can_fetch(self, url: str) -> bool:
         """Can fetch URLs that start with test://"""
         return url.startswith("test://")
 
@@ -450,7 +451,7 @@ class MockDataStorageHost:
         """Mock state manager."""
         return self._state_manager
 
-    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+    def schedule_fetch(self, url: str) -> None:
         """Mock fetch scheduling."""
 
 
@@ -517,7 +518,7 @@ class MockContentExtractorHost(MockBaseHost):
         """Request extraction of nested content."""
         self.store_extracted_content(content, metadata)
 
-    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+    def schedule_fetch(self, url: str) -> None:
         """Schedule a URL for fetching."""
         # For testing, we don't need to actually schedule anything
         return
@@ -543,11 +544,11 @@ class MockContentSourceHost(MockBaseHost):
 
     def __init__(self) -> None:
         super().__init__()
-        self.scheduled_urls: list[tuple[str, Metadata | None]] = []
+        self.scheduled_urls: list[tuple[str]] = []
 
-    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+    def schedule_fetch(self, url: str) -> None:
         """Schedule a URL for fetching."""
-        self.scheduled_urls.append((url, metadata))
+        self.scheduled_urls.append((url,))
 
     def schedule_next_run(self, time_interval: timedelta) -> None:
         """Schedule the next run of the content source."""
@@ -575,7 +576,7 @@ class MockContentFetcherHost(MockBaseHost):
         url = metadata.source_url if metadata else "unknown"
         self.store_fetched_content(url, content, metadata)
 
-    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+    def schedule_fetch(self, url: str) -> None:
         """Schedule a URL for fetching."""
         # For testing, we don't need to actually schedule anything
         return
@@ -592,7 +593,7 @@ class MockLifecycleHost(MockBaseHost):
         """Log a lifecycle event."""
         self.lifecycle_events.append(event)
 
-    def schedule_fetch(self, url: str, metadata: Metadata | None = None) -> None:
+    def schedule_fetch(self, url: str) -> None:
         """Schedule a URL for fetching."""
         # For testing, we don't need to actually schedule anything
         return

@@ -249,7 +249,7 @@ class ConfigurationManager:
 
         config = state_storage.get(system_partition, config_key)
         if config and isinstance(config, dict):
-            return config  # type: ignore[no-any-return]
+            return config
 
         return None
 
