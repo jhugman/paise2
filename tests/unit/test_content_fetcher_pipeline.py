@@ -78,10 +78,234 @@ class TestContentFetcherHost:
 class TestContentFetcherSelection:
     """Test ContentFetcher selection and prioritization logic."""
 
-    def test_placeholder_for_future_implementation(self) -> None:
-        """Placeholder test - will be implemented when fetcher selection is added."""
-        # This will be implemented when we create the fetcher selection logic
-        assert True
+    def test_fetcher_selection_prioritization(self) -> None:
+        """Test that fetchers are selected in first-match-wins order."""
+        from paise2.plugins.core.registry import PluginManager
+        from paise2.plugins.providers.content_fetchers import (
+            FileContentFetcher,
+            HTTPContentFetcher,
+        )
+
+        # Create plugin manager
+        pm = PluginManager()
+
+        # Register fetchers in specific order
+        file_fetcher = FileContentFetcher()
+        http_fetcher = HTTPContentFetcher()
+        pm.register_content_fetcher(file_fetcher)
+        pm.register_content_fetcher(http_fetcher)
+
+        # Get registered fetchers
+        registered_fetchers = pm.get_content_fetchers()
+        assert len(registered_fetchers) >= 2
+
+        # Test that first matching fetcher is selected
+        host = Mock()
+        url = "http://example.com"
+
+        # FileContentFetcher should not match HTTP URLs
+        assert not file_fetcher.can_fetch(host, url)
+        # HTTPContentFetcher should match HTTP URLs
+        assert http_fetcher.can_fetch(host, url)
+
+        # Find first fetcher that can handle the URL (should be HTTPContentFetcher)
+        selected_fetcher = None
+        for fetcher in registered_fetchers:
+            if fetcher.can_fetch(host, url):
+                selected_fetcher = fetcher
+                break
+
+        assert selected_fetcher is not None
+        assert isinstance(selected_fetcher, HTTPContentFetcher)
+
+    def test_fetcher_selection_http_url(self) -> None:
+        """Test fetcher selection for HTTP URLs."""
+        from paise2.plugins.core.registry import PluginManager
+        from paise2.plugins.providers.content_fetchers import (
+            FileContentFetcher,
+            HTTPContentFetcher,
+        )
+
+        # Create plugin manager
+        pm = PluginManager()
+
+        # Register fetchers
+        file_fetcher = FileContentFetcher()
+        http_fetcher = HTTPContentFetcher()
+        pm.register_content_fetcher(file_fetcher)
+        pm.register_content_fetcher(http_fetcher)
+
+        # Get registered fetchers
+        registered_fetchers = pm.get_content_fetchers()
+
+        # Test HTTP URL - HTTPContentFetcher should match
+        host = Mock()
+        url = "http://example.com"
+
+        selected_fetcher = None
+        for fetcher in registered_fetchers:
+            if fetcher.can_fetch(host, url):
+                selected_fetcher = fetcher
+                break
+
+        assert selected_fetcher is not None
+        assert isinstance(selected_fetcher, HTTPContentFetcher)
+
+    def test_fetcher_no_match(self) -> None:
+        """Test behavior when no fetcher can handle the URL."""
+        from paise2.plugins.core.registry import PluginManager
+        from paise2.plugins.providers.content_fetchers import (
+            FileContentFetcher,
+            HTTPContentFetcher,
+        )
+
+        # Create plugin manager
+        pm = PluginManager()
+
+        # Register fetchers
+        file_fetcher = FileContentFetcher()
+        http_fetcher = HTTPContentFetcher()
+        pm.register_content_fetcher(file_fetcher)
+        pm.register_content_fetcher(http_fetcher)
+
+        # Get registered fetchers
+        registered_fetchers = pm.get_content_fetchers()
+
+        # Test unsupported URL
+        host = Mock()
+        url = "ftp://example.com/file.txt"
+
+        selected_fetcher = None
+        for fetcher in registered_fetchers:
+            if fetcher.can_fetch(host, url):
+                selected_fetcher = fetcher
+                break
+
+        assert selected_fetcher is None
+
+
+class TestContentFetcherCacheIntegration:
+    """Test ContentFetcher integration with cache."""
+
+    async def test_fetcher_cache_integration(self) -> None:
+        """Test that ContentFetcher properly integrates with cache."""
+        from paise2.plugins.core.hosts import create_content_fetcher_host
+        from paise2.plugins.providers.content_fetchers import HTTPContentFetcher
+        from paise2.utils.logging import SimpleInMemoryLogger
+
+        # Create async mock for cache
+        cache_mock = Mock()
+        cache_mock.save = Mock()
+
+        # Create fetcher host with cache
+        host = create_content_fetcher_host(
+            logger=SimpleInMemoryLogger(),
+            configuration=Mock(),
+            state_storage=Mock(),
+            plugin_module_name="system",
+            cache=cache_mock,
+            task_queue=None,
+        )
+
+        # Test that cache is available
+        assert host.cache is cache_mock
+
+        # Test that cache can be used (doesn't crash)
+        # This tests the integration but doesn't make actual HTTP requests
+        fetcher = HTTPContentFetcher()
+        assert fetcher.can_fetch(host, "http://example.com")
+
+
+class TestFetchContentTask:
+    """Test fetch_content_task implementation."""
+
+    def test_fetch_content_task_with_registered_fetchers(self) -> None:
+        """Test fetch_content_task uses registered ContentFetchers."""
+        from huey import MemoryHuey
+
+        from paise2.plugins.core.registry import PluginManager
+        from paise2.plugins.core.startup import Singletons
+        from paise2.plugins.core.tasks import setup_tasks
+        from paise2.plugins.providers.content_fetchers import FileContentFetcher
+        from paise2.utils.logging import SimpleInMemoryLogger
+
+        # Create plugin manager and register a fetcher
+        pm = PluginManager()
+        pm.register_content_fetcher(FileContentFetcher())
+
+        # Create mock singletons
+        singletons = Singletons(
+            plugin_manager=pm,
+            logger=SimpleInMemoryLogger(),
+            configuration=Mock(),
+            state_storage=Mock(),
+            task_queue=None,
+            cache=Mock(),
+            data_storage=Mock(),
+        )
+
+        # Setup tasks with MemoryHuey for testing
+        huey = MemoryHuey(immediate=True)
+        tasks = setup_tasks(huey, singletons)
+
+        # Test fetch_content_task
+        fetch_task = tasks["fetch_content"]
+
+        # This will test the task logic - fetcher should be found and used
+        result_obj = fetch_task("file:///non/existent/file.txt")
+        result = result_obj()  # Get actual result when immediate=True
+
+        # Should return success because a fetcher was found and executed
+        assert result["status"] == "success"
+        assert "Fetched content from" in result["message"]
+
+        # Check that the fetcher was used by looking at log messages
+        # Cast to SimpleInMemoryLogger to access get_logs method
+        from paise2.utils.logging import SimpleInMemoryLogger
+
+        logger = singletons.logger
+        assert isinstance(logger, SimpleInMemoryLogger)
+        log_entries = logger.get_logs()
+        log_messages = [entry[2] for entry in log_entries]  # Extract message part
+        assert any(
+            "Using fetcher FileContentFetcher" in message for message in log_messages
+        )
+
+    def test_fetch_content_task_no_fetchers_found(self) -> None:
+        """Test fetch_content_task when no fetchers can handle URL."""
+        from huey import MemoryHuey
+
+        from paise2.plugins.core.registry import PluginManager
+        from paise2.plugins.core.startup import Singletons
+        from paise2.plugins.core.tasks import setup_tasks
+        from paise2.utils.logging import SimpleInMemoryLogger
+
+        # Create plugin manager with no fetchers
+        pm = PluginManager()
+
+        # Create mock singletons
+        singletons = Singletons(
+            plugin_manager=pm,
+            logger=SimpleInMemoryLogger(),
+            configuration=Mock(),
+            state_storage=Mock(),
+            task_queue=None,
+            cache=Mock(),
+            data_storage=Mock(),
+        )
+
+        # Setup tasks with MemoryHuey for testing
+        huey = MemoryHuey(immediate=True)
+        tasks = setup_tasks(huey, singletons)
+
+        # Test fetch_content_task
+        fetch_task = tasks["fetch_content"]
+        result_obj = fetch_task("unsupported://example.com")
+        result = result_obj()  # Get actual result when immediate=True
+
+        # Should return error for unsupported URL
+        assert result["status"] == "error"
+        assert "No fetcher found" in result["message"]
 
 
 class TestExampleContentFetchers:
@@ -189,12 +413,3 @@ class TestExampleContentFetchers:
 
         assert url in content  # Placeholder content should contain URL
         assert metadata.source_url == url
-
-
-class TestFetchContentTask:
-    """Test fetch_content_task implementation with fetcher selection."""
-
-    def test_placeholder_for_future_implementation(self) -> None:
-        """Placeholder test - will be implemented when task is enhanced."""
-        # This will be implemented when we update fetch_content_task
-        assert True
