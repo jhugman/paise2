@@ -49,9 +49,22 @@ class Metadata:
         Returns:
             New Metadata instance with changes applied
         """
-        current_dict = asdict(self)
-        current_dict.update(changes)
-        return Metadata(**current_dict)
+        # Get current values as dict
+        current_values = asdict(self)
+
+        # Apply changes
+        current_values.update(changes)
+
+        # Create new instance
+        return Metadata(**current_values)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert Metadata to a dictionary for serialization.
+
+        Returns:
+            Dictionary representation of metadata
+        """
+        return asdict(self)
 
     def merge(self, patch: Metadata) -> Metadata:
         """Create a new Metadata instance merged with patch.

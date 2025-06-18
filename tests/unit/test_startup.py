@@ -62,6 +62,7 @@ class TestSingletons:
     def test_singletons_creation(self) -> None:
         """Test that Singletons container can be created with all dependencies."""
         # Mock all required singletons
+        plugin_manager = Mock()
         logger = Mock()
         configuration = Mock()
         state_storage = Mock()
@@ -70,6 +71,7 @@ class TestSingletons:
         data_storage = Mock()
 
         singletons = Singletons(
+            plugin_manager=plugin_manager,
             logger=logger,
             configuration=configuration,
             state_storage=state_storage,
@@ -182,7 +184,7 @@ class TestStartupManager:
         assert startup_manager.singletons.task_queue is not None
         from huey import MemoryHuey
 
-        assert isinstance(startup_manager.singletons.task_queue, MemoryHuey)
+        assert isinstance(startup_manager.singletons.task_queue.huey, MemoryHuey)
         assert startup_manager.singletons.cache is not None
         assert startup_manager.singletons.data_storage is not None
 
@@ -267,7 +269,7 @@ class TestStartupManager:
         assert singletons.task_queue is not None
         from huey import MemoryHuey
 
-        assert isinstance(singletons.task_queue, MemoryHuey)
+        assert isinstance(singletons.task_queue.huey, MemoryHuey)
         assert singletons.cache is not None
         assert singletons.data_storage is not None
 

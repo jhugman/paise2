@@ -239,7 +239,7 @@ class TestMockPluginSystemIntegration:
             assert task_queue is not None  # MockTaskQueueProvider returns MemoryHuey
             from huey import MemoryHuey
 
-            assert isinstance(task_queue, MemoryHuey)
+            assert isinstance(task_queue.huey, MemoryHuey)
 
         finally:
             plugin_system.stop()

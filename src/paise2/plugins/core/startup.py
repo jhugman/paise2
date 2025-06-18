@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from paise2.utils.logging import SimpleInMemoryLogger
 
@@ -20,93 +20,22 @@ if TYPE_CHECKING:
         StateStorage,
     )
     from paise2.plugins.core.registry import PluginManager
+    from paise2.plugins.core.tasks import TaskQueue
 
 __all__ = [
     "Singletons",
     "StartupError",
     "StartupManager",
     "StartupPhase",
-    "setup_tasks",
 ]
-
-
-def setup_tasks(huey: Huey | None, singletons: Singletons) -> dict[str, Callable]:
-    """
-    Define tasks with the provided Huey instance and singletons.
-
-    Implements the two-phase initialization pattern: first create TaskQueueProvider,
-    then create singletons, then setup tasks with both.
-
-    Args:
-        huey: Huey instance for task definition (may be None for sync execution)
-        singletons: System singletons for task implementation
-
-    Returns:
-        Dict mapping task names to task functions. Empty dict for sync execution.
-    """
-    if huey is None:
-        # No tasks for synchronous execution
-        return {}
-
-    @huey.task()  # type: ignore[misc]
-    def fetch_content_task(
-        url: str, metadata: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
-        """Fetch content using appropriate ContentFetcher plugin."""
-        # Placeholder implementation - will be enhanced in future prompts
-        # with actual ContentFetcher integration
-        _ = metadata  # Will be used in future implementation
-        singletons.logger.info("Fetch task scheduled")
-        return {"status": "success", "message": f"Fetched content from {url}"}
-
-    @huey.task()  # type: ignore[misc]
-    def extract_content_task(
-        content: bytes | str, metadata: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Extract content using appropriate ContentExtractor plugin."""
-        # Placeholder implementation - will be enhanced in future prompts
-        # with actual ContentExtractor integration
-        _ = content  # Will be used in future implementation
-        _ = metadata  # Will be used in future implementation
-        singletons.logger.info("Extract task scheduled")
-        return {"status": "success", "message": "Content extraction completed"}
-
-    @huey.task()  # type: ignore[misc]
-    def store_content_task(
-        content: dict[str, Any], metadata: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Store processed content in the data storage."""
-        # Placeholder implementation - will be enhanced in future prompts
-        # with actual DataStorage integration
-        _ = content  # Will be used in future implementation
-        _ = metadata  # Will be used in future implementation
-        singletons.logger.info("Store task scheduled for processed content")
-        return {"status": "success", "message": "Content stored successfully"}
-
-    @huey.task()  # type: ignore[misc]
-    def cleanup_cache_task(cache_ids: list[str]) -> dict[str, Any]:
-        """Clean up specified cache entries."""
-        # Placeholder implementation - will be enhanced in future prompts
-        # with actual cache cleanup integration
-        count = len(cache_ids)
-        singletons.logger.info("Cache cleanup task scheduled")
-        return {"status": "success", "message": f"Cleaned up {count} cache entries"}
-
-    return {
-        "fetch_content": fetch_content_task,
-        "extract_content": extract_content_task,
-        "store_content": store_content_task,
-        "cleanup_cache": cleanup_cache_task,
-    }
-
 
 # Error messages constants
 _SINGLETONS_NOT_CREATED = "Singletons not created during startup"
 _NO_CONFIG_PROVIDERS = "No configuration providers found"
 _NO_STATE_PROVIDERS = "No state storage providers found"
 _NO_TASK_QUEUE_PROVIDERS = "No task queue providers found"
-_NO_CACHE_PROVIDERS = "No cache providers found"
-_NO_DATA_STORAGE_PROVIDERS = "No data storage providers found"
+_NO_CACHE_PROVIDERS = "No cache providers available"
+_NO_DATA_STORAGE_PROVIDERS = "No data storage providers available"
 _NO_STATE_PROVIDERS_AVAILABLE = "No state storage providers available"
 
 
@@ -129,21 +58,21 @@ class Singletons:
 
     def __init__(  # noqa: PLR0913
         self,
+        plugin_manager: PluginManager,
         logger: Logger,
         configuration: Configuration,
         state_storage: StateStorage,
-        task_queue: Huey | None,
+        task_queue: TaskQueue | None,
         cache: CacheManager,
         data_storage: DataStorage,
-        tasks: dict[str, Any] | None = None,
     ):
+        self.plugin_manager = plugin_manager
         self.logger = logger
         self.configuration = configuration
         self.state_storage = state_storage
         self.task_queue = task_queue
         self.cache = cache
         self.data_storage = data_storage
-        self.tasks = tasks or {}
 
 
 class StartupManager:
@@ -258,7 +187,7 @@ class StartupManager:
 
         # Step 4: Create other singletons
         cache = self._create_cache_singleton(final_configuration)
-        task_queue = self._create_task_queue_singleton(final_configuration)
+        huey = self._create_task_queue_singleton(final_configuration)
         data_storage = self._create_data_storage_singleton(final_configuration)
 
         # Step 5: Create logger and replay bootstrap logs
@@ -267,24 +196,27 @@ class StartupManager:
 
         # Create initial singletons container (without tasks)
         initial_singletons = Singletons(
+            plugin_manager=self.plugin_manager,
             logger=logger,
             configuration=final_configuration,
             state_storage=state_storage,
-            task_queue=task_queue,
+            task_queue=None,
             cache=cache,
             data_storage=data_storage,
         )
 
         # Step 6: Setup tasks and create final singletons container
-        tasks = setup_tasks(task_queue, initial_singletons)
+        from paise2.plugins.core.tasks import TaskQueue  # Avoid circular import
+
+        task_queue = TaskQueue(huey, initial_singletons)
         self.singletons = Singletons(
+            plugin_manager=self.plugin_manager,
             logger=logger,
             configuration=final_configuration,
             state_storage=state_storage,
             task_queue=task_queue,
             cache=cache,
             data_storage=data_storage,
-            tasks=tasks,
         )
 
         self.bootstrap_logger.info("Phase 3: Singletons created with task registry")

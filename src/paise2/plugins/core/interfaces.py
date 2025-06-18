@@ -235,9 +235,7 @@ class DataStorage(Protocol):
         """
         ...
 
-    async def find_item_id(
-        self, host: BaseHost, metadata: Metadata
-    ) -> ItemId | None:
+    async def find_item_id(self, host: BaseHost, metadata: Metadata) -> ItemId | None:
         """
         Find an item by its metadata.
 

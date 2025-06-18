@@ -1365,19 +1365,19 @@ Focus on:
 ```
 
 ### Task List
-- [ ] Implement ContentFetcherHost with task registry access
-- [ ] Add extract_file() method using task registry for extraction scheduling
-- [ ] Create fetcher selection logic with can_fetch() evaluation
-- [ ] Implement fetcher prioritization and first-match-wins behavior
-- [ ] Update fetch_content_task to use ContentFetcher selection
-- [ ] Add cache integration for fetched content storage
-- [ ] Create FileContentFetcher example implementation
-- [ ] Create HTTPContentFetcher example implementation
-- [ ] Add ContentFetcher registration hooks to plugin system
-- [ ] Create comprehensive tests for fetcher selection and prioritization
-- [ ] Test content retrieval, caching, and extraction scheduling
-- [ ] Verify both sync and async execution modes work correctly
-- [ ] PROMPT 20 COMPLETE
+- [x] Implement ContentFetcherHost with task registry access
+- [x] Add extract_file() method using task registry for extraction scheduling
+- [x] Create fetcher selection logic with can_fetch() evaluation
+- [x] Implement fetcher prioritization and first-match-wins behavior
+- [x] Update fetch_content_task to use ContentFetcher selection
+- [x] Add cache integration for fetched content storage
+- [x] Create FileContentFetcher example implementation
+- [x] Create HTTPContentFetcher example implementation
+- [x] Add ContentFetcher registration hooks to plugin system
+- [x] Create comprehensive tests for fetcher selection and prioritization
+- [x] Test content retrieval, caching, and extraction scheduling
+- [x] Verify both sync and async execution modes work correctly
+- [x] PROMPT 20 COMPLETE
 
 ---
 

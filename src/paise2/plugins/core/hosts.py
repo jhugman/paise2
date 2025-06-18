@@ -15,9 +15,11 @@ if TYPE_CHECKING:
         CacheManager,
         Configuration,
         DataStorage,
+        Logger,
         StateManager,
         StateStorage,
     )
+    from paise2.plugins.core.tasks import TaskQueue
 
 
 class ConcreteStateManager:
@@ -53,7 +55,7 @@ class BaseHost:
 
     def __init__(
         self,
-        logger: Any,
+        logger: Logger,
         configuration: Configuration,
         state_storage: StateStorage,
         plugin_module_name: str,
@@ -127,7 +129,7 @@ def create_state_manager(
 
 
 def create_base_host(
-    logger: Any,
+    logger: Logger,
     configuration: Configuration,
     state_storage: StateStorage,
     plugin_module_name: str,
@@ -141,7 +143,7 @@ class ContentExtractorHost(BaseHost):
 
     def __init__(  # noqa: PLR0913
         self,
-        logger: Any,
+        logger: Logger,
         configuration: Configuration,
         state_storage: StateStorage,
         plugin_module_name: str,
@@ -172,7 +174,7 @@ class ContentSourceHost(BaseHost):
 
     def __init__(  # noqa: PLR0913
         self,
-        logger: Any,
+        logger: Logger,
         configuration: Configuration,
         state_storage: StateStorage,
         plugin_module_name: str,
@@ -199,16 +201,11 @@ class ContentSourceHost(BaseHost):
         """Schedule a fetch operation using the task registry."""
         if self._singletons and self._singletons.task_queue:
             # Async mode: use task queue
-            fetch_task = self._singletons.tasks.get("fetch_content")
-            if fetch_task:
-                metadata_dict = asdict(metadata) if metadata else None
-                result = fetch_task(url, metadata_dict)
-                task_id = getattr(result, "id", None)
-                self.logger.info("Scheduled fetch task for %s", url)
-                return task_id
-
-            self.logger.warning("No fetch_content task available in task registry")
-            return None
+            metadata_dict = asdict(metadata) if metadata else None
+            result = self._singletons.task_queue.fetch_content(url, metadata_dict)
+            task_id = getattr(result, "id", None)
+            self.logger.info("Scheduled fetch task for %s", url)
+            return task_id
 
         # Sync mode: log what would be done
         self.logger.info("Synchronous execution: would fetch %s", url)
@@ -229,16 +226,18 @@ class ContentSourceHost(BaseHost):
 class ContentFetcherHost(BaseHost):
     """Specialized host for content fetchers with cache access and extraction."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
-        logger: Any,
+        logger: Logger,
         configuration: Configuration,
         state_storage: StateStorage,
         plugin_module_name: str,
         cache: CacheManager,
+        task_queue: TaskQueue | None,
     ):
         super().__init__(logger, configuration, state_storage, plugin_module_name)
         self._cache = cache
+        self._task_queue = task_queue
 
     @property
     def cache(self) -> CacheManager:
@@ -246,8 +245,24 @@ class ContentFetcherHost(BaseHost):
         return self._cache
 
     def extract_file(self, content: Content, metadata: Metadata) -> None:
-        """Request extraction of fetched content (placeholder implementation)."""
-        # NOTE: This will be implemented when job queue integration is added
+        """Request extraction of fetched content using task registry."""
+        if self._task_queue:
+            # Async mode: schedule extraction task using task registry
+            result = self._task_queue.extract_content(
+                content=content, metadata=metadata
+            )
+
+            # Log task scheduling
+            if hasattr(result, "id"):
+                self.logger.info("Scheduled extraction task %s", result.id)
+            else:
+                self.logger.info("Scheduled extraction task (sync mode)")
+        else:
+            # Sync mode: log what would be done
+            self.logger.info(
+                "Synchronous execution: would extract content from %s",
+                metadata.source_url,
+            )
 
 
 class DataStorageHost(BaseHost):
@@ -255,7 +270,7 @@ class DataStorageHost(BaseHost):
 
     def __init__(
         self,
-        logger: Any,
+        logger: Logger,
         configuration: Configuration,
         state_storage: StateStorage,
         plugin_module_name: str,
@@ -268,7 +283,7 @@ class LifecycleHost(BaseHost):
 
     def __init__(
         self,
-        logger: Any,
+        logger: Logger,
         configuration: Configuration,
         state_storage: StateStorage,
         plugin_module_name: str,
@@ -282,7 +297,7 @@ class BaseHostWithTaskQueue(BaseHost):
 
     def __init__(
         self,
-        logger: Any,
+        logger: Logger,
         configuration: Configuration,
         state_storage: StateStorage,
         plugin_module_name: str,
@@ -303,7 +318,7 @@ class ContentExtractorHostWithTaskQueue(ContentExtractorHost):
 
     def __init__(  # noqa: PLR0913
         self,
-        logger: Any,
+        logger: Logger,
         configuration: Configuration,
         state_storage: StateStorage,
         plugin_module_name: str,
@@ -329,7 +344,7 @@ class ContentExtractorHostWithTaskQueue(ContentExtractorHost):
 
 # Factory functions for specialized hosts
 def create_content_extractor_host(  # noqa: PLR0913
-    logger: Any,
+    logger: Logger,
     configuration: Configuration,
     state_storage: StateStorage,
     plugin_module_name: str,
@@ -343,7 +358,7 @@ def create_content_extractor_host(  # noqa: PLR0913
 
 
 def create_content_source_host(  # noqa: PLR0913
-    logger: Any,
+    logger: Logger,
     configuration: Configuration,
     state_storage: StateStorage,
     plugin_module_name: str,
@@ -363,21 +378,22 @@ def create_content_source_host(  # noqa: PLR0913
     )
 
 
-def create_content_fetcher_host(
-    logger: Any,
+def create_content_fetcher_host(  # noqa: PLR0913
+    logger: Logger,
     configuration: Configuration,
     state_storage: StateStorage,
     plugin_module_name: str,
     cache: CacheManager,
+    task_queue: TaskQueue | None = None,
 ) -> ContentFetcherHost:
     """Create a ContentFetcherHost instance."""
     return ContentFetcherHost(
-        logger, configuration, state_storage, plugin_module_name, cache
+        logger, configuration, state_storage, plugin_module_name, cache, task_queue
     )
 
 
 def create_data_storage_host(
-    logger: Any,
+    logger: Logger,
     configuration: Configuration,
     state_storage: StateStorage,
     plugin_module_name: str,
@@ -387,7 +403,7 @@ def create_data_storage_host(
 
 
 def create_lifecycle_host(
-    logger: Any,
+    logger: Logger,
     configuration: Configuration,
     state_storage: StateStorage,
     plugin_module_name: str,

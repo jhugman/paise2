@@ -13,6 +13,7 @@ from paise2.plugins.core.interfaces import (  # noqa: TC001
     LifecycleAction,
 )
 from paise2.plugins.core.manager import PluginSystem
+from paise2.plugins.core.tasks import TaskQueue
 from tests.fixtures import create_test_plugin_manager_with_mocks
 
 
@@ -249,7 +250,7 @@ class SystemHealthDiagnostics:
             "singletons_available": False,
             "configuration_accessible": False,
             "state_storage_functional": False,
-            "job_queue_functional": False,
+            "task_queue_functional": False,
             "cache_functional": False,
             "data_storage_functional": False,
             "plugin_counts": {},
@@ -372,12 +373,8 @@ class SystemHealthDiagnostics:
             # Check that task queue is available and functional
             task_queue = singletons.task_queue
 
-            # For MemoryHuey with immediate=True, we just check it exists
-            # and is the expected type
-            from huey import MemoryHuey
-
-            health_report["job_queue_functional"] = (
-                task_queue is not None and isinstance(task_queue, MemoryHuey)
+            health_report["task_queue_functional"] = (
+                task_queue is not None and isinstance(task_queue, TaskQueue)
             )
         except Exception as e:
             health_report["errors"].append(f"Task queue health check failed: {e}")
@@ -463,7 +460,7 @@ class TestPluginSystemValidation:
             assert health_report["state_storage_functional"] is True
             assert health_report["cache_functional"] is True
             assert health_report["data_storage_functional"] is True
-            assert health_report["job_queue_functional"] is True
+            assert health_report["task_queue_functional"] is True
 
             # Should have plugin counts
             assert "plugin_counts" in health_report

@@ -404,6 +404,7 @@ class TestSpecializedHosts:
             state_storage=self.mock_state_storage,
             plugin_module_name=self.plugin_module_name,
             cache=self.mock_cache,
+            task_queue=None,
         )
 
         # Verify it implements the ContentFetcherHost protocol
@@ -425,6 +426,7 @@ class TestSpecializedHosts:
             state_storage=self.mock_state_storage,
             plugin_module_name=self.plugin_module_name,
             cache=self.mock_cache,
+            task_queue=None,
         )
 
         # Test extract_file method
@@ -524,6 +526,7 @@ class TestHostFactoriesSpecialized:
             state_storage=self.mock_state_storage,
             plugin_module_name=self.plugin_module_name,
             cache=self.mock_cache,
+            task_queue=None,
         )
 
         assert isinstance(host, ContentFetcherHost)
