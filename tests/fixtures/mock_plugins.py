@@ -10,8 +10,6 @@ import pluggy
 from paise2.models import Content, Metadata
 
 if TYPE_CHECKING:
-    from datetime import timedelta
-
     from huey import Huey
 
     from paise2.plugins.core.interfaces import (
@@ -549,11 +547,6 @@ class MockContentSourceHost(MockBaseHost):
     def schedule_fetch(self, url: str) -> None:
         """Schedule a URL for fetching."""
         self.scheduled_urls.append((url,))
-
-    def schedule_next_run(self, time_interval: timedelta) -> None:
-        """Schedule the next run of the content source."""
-        # For testing, we don't need to actually schedule anything
-        return
 
 
 class MockContentFetcherHost(MockBaseHost):

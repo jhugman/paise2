@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from unittest.mock import Mock
 
 from paise2.models import Metadata
@@ -366,6 +365,7 @@ class TestSpecializedHosts:
             plugin_module_name=self.plugin_module_name,
             cache=self.mock_cache,
             data_storage=self.mock_data_storage,
+            task_queue=self.mock_task_queue,
         )
 
         # Verify it implements the ContentSourceHost protocol
@@ -373,28 +373,6 @@ class TestSpecializedHosts:
         assert host.logger is self.mock_logger
         assert host.configuration is self.mock_configuration
         assert host.cache is self.mock_cache
-        assert hasattr(host, "schedule_next_run")
-
-    def test_content_source_host_schedule_next_run_method(self) -> None:
-        """Test ContentSourceHost schedule_next_run method functionality."""
-        from paise2.plugins.core.hosts import (
-            ContentSourceHost as ConcreteContentSourceHost,
-        )
-
-        host = ConcreteContentSourceHost(
-            logger=self.mock_logger,
-            configuration=self.mock_configuration,
-            state_storage=self.mock_state_storage,
-            plugin_module_name=self.plugin_module_name,
-            cache=self.mock_cache,
-            data_storage=self.mock_data_storage,
-        )
-
-        # Test schedule_next_run method
-        time_interval = timedelta(minutes=30)
-
-        # For now, this should not raise an error (placeholder implementation)
-        host.schedule_next_run(time_interval)
 
     def test_content_fetcher_host_creation(self) -> None:
         """Test ContentFetcherHost creation with cache access and extraction."""
@@ -517,6 +495,7 @@ class TestHostFactoriesSpecialized:
             plugin_module_name=self.plugin_module_name,
             cache=self.mock_cache,
             data_storage=self.mock_data_storage,
+            task_queue=self.mock_task_queue,
         )
 
         assert isinstance(host, ContentSourceHost)

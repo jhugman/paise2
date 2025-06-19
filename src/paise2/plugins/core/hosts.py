@@ -7,8 +7,6 @@ import inspect
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from datetime import timedelta
-
     from paise2.models import Content, Metadata
     from paise2.plugins.core.interfaces import (
         CacheManager,
@@ -178,6 +176,18 @@ class ContentExtractorHost(BaseHost):
         else:
             self.logger.info("Scheduled recursive extraction task (sync mode)")
 
+    def store_content(self, content: Content, metadata: Metadata) -> None:
+        """Request extraction of nested content using task registry for recursive extraction."""  # noqa: E501
+
+        # Async mode: schedule extraction task using task registry
+        result = self._task_queue.store_content(content=content, metadata=metadata)
+
+        # Log task scheduling
+        if hasattr(result, "id"):
+            self.logger.info("Scheduled recursive extraction task %s", result.id)
+        else:
+            self.logger.info("Scheduled recursive extraction task (sync mode)")
+
 
 class ContentSourceHost(BaseHost):
     """Specialized host for content sources with cache access and scheduling."""
@@ -190,12 +200,12 @@ class ContentSourceHost(BaseHost):
         plugin_module_name: str,
         cache: CacheManager,
         data_storage: DataStorage,
-        singletons: Singletons | None = None,
+        task_queue: TaskQueue,
     ):
         super().__init__(logger, configuration, state_storage, plugin_module_name)
         self._cache = cache
         self._data_storage = data_storage
-        self._singletons = singletons
+        self._task_queue = task_queue
 
     @property
     def cache(self) -> CacheManager:
@@ -209,27 +219,10 @@ class ContentSourceHost(BaseHost):
 
     def schedule_fetch(self, url: str) -> Any:
         """Schedule a fetch operation using the task registry."""
-        if self._singletons and self._singletons.task_queue:
-            # Async mode: use task queue
-            result = self._singletons.task_queue.fetch_content(url)
-            task_id = getattr(result, "id", None)
-            self.logger.info("Scheduled fetch task for %s", url)
-            return task_id
-
-        # Sync mode: log what would be done
-        self.logger.info("Synchronous execution: would fetch %s", url)
-        return None
-
-    def schedule_next_run(self, time_interval: timedelta) -> None:
-        """Schedule the next run of this content source."""
-        if self._singletons and self._singletons.task_queue:
-            # Async mode: would schedule using task queue scheduler
-            self.logger.info("Scheduled next content source run in %s", time_interval)
-        else:
-            # Sync mode: log what would be done
-            self.logger.info(
-                "Synchronous execution: would schedule next run in %s", time_interval
-            )
+        result = self._task_queue.fetch_content(url)
+        task_id = getattr(result, "id", None)
+        self.logger.info("Scheduled fetch task for %s", url)
+        return task_id
 
 
 class ContentFetcherHost(BaseHost):
@@ -399,7 +392,7 @@ def create_content_source_host(  # noqa: PLR0913
     plugin_module_name: str,
     cache: CacheManager,
     data_storage: DataStorage,
-    singletons: Singletons | None = None,
+    task_queue: TaskQueue,
 ) -> ContentSourceHost:
     """Create a ContentSourceHost instance."""
     return ContentSourceHost(
@@ -409,7 +402,7 @@ def create_content_source_host(  # noqa: PLR0913
         plugin_module_name,
         cache,
         data_storage,
-        singletons,
+        task_queue,
     )
 
 

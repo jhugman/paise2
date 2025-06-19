@@ -140,7 +140,7 @@ class TestTwoPhaseInitialization:
             logger=initial_singletons.logger,
             configuration=initial_singletons.configuration,
             state_storage=initial_singletons.state_storage,
-            task_queue=task_queue,
+            task_queue=initial_singletons.task_queue,
             cache=initial_singletons.cache,
             data_storage=initial_singletons.data_storage,
         )

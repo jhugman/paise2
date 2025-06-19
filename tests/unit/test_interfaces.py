@@ -3,12 +3,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
-
-if TYPE_CHECKING:
-    from datetime import timedelta
 
 from paise2.models import CacheId, Content, ItemId, Metadata
 from paise2.plugins.core.interfaces import (
@@ -354,9 +351,6 @@ class TestHostInterfaces:
             def data_storage(self) -> DataStorage:
                 return MockDataStorage()
 
-            def schedule_next_run(self, time_interval: timedelta) -> None:
-                pass
-
         host = TestContentSourceHost()
         assert isinstance(host, ContentSourceHost)
         assert isinstance(host, BaseHost)
@@ -560,9 +554,6 @@ class TestProtocolInheritance:
                 return MockCacheManager()
 
             def extract_file(self, content: bytes | str, metadata: Metadata) -> None:
-                pass
-
-            def schedule_next_run(self, time_interval: timedelta) -> None:
                 pass
 
         host = ComprehensiveHost()

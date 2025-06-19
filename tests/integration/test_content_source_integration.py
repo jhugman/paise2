@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
 from paise2.plugins.core.manager import PluginSystem
+from paise2.plugins.core.tasks import TaskQueue
 from tests.fixtures import create_test_plugin_manager_with_mocks
 
 
@@ -74,7 +76,7 @@ class TestContentSourceIntegration:
                     plugin_module_name="test.integration",
                     cache=singletons.cache,
                     data_storage=singletons.data_storage,
-                    singletons=singletons,
+                    task_queue=singletons.task_queue or Mock(spec=TaskQueue),
                 )
 
                 # When: Start the source
@@ -127,7 +129,7 @@ class TestContentSourceIntegration:
                     plugin_module_name="test.integration",
                     cache=singletons.cache,
                     data_storage=singletons.data_storage,
-                    singletons=singletons,
+                    task_queue=singletons.task_queue or Mock(spec=TaskQueue),
                 )
 
                 # Import and create the ContentSource with filtering
@@ -199,7 +201,7 @@ class TestContentSourceIntegration:
                 plugin_module_name="test.integration",
                 cache=singletons.cache,
                 data_storage=singletons.data_storage,
-                singletons=singletons,
+                task_queue=singletons.task_queue or Mock(spec=TaskQueue),
             )
 
             # When: Discover content

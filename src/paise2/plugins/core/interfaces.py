@@ -15,8 +15,6 @@ from typing import (
 )
 
 if TYPE_CHECKING:
-    from datetime import timedelta
-
     from huey import Huey
 
     from paise2.models import CacheId, Content, ItemId, Metadata
@@ -860,15 +858,6 @@ class ContentSourceHost(BaseHost, Protocol):
 
         Returns:
             DataStorage instance
-        """
-        ...
-
-    def schedule_next_run(self, time_interval: timedelta) -> None:
-        """
-        Schedule the next run of this content source.
-
-        Args:
-            time_interval: Time until next run
         """
         ...
 
