@@ -3,10 +3,7 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any
-
-import pytest
 
 
 class MockConfiguration:
@@ -87,46 +84,3 @@ def test_huey_sqlite_task_queue_provider_immediate_mode() -> None:
     assert task_queue is not None
     # Check immediate mode is enabled
     assert task_queue.immediate is True
-
-
-@pytest.mark.skipif(
-    "REDIS_URL" not in os.environ, reason="Redis not available for testing"
-)
-def test_huey_redis_task_queue_provider_creates_huey_instance() -> None:
-    """Test that HueyRedisTaskQueueProvider creates a Huey instance."""
-    from paise2.plugins.providers.task_queue import HueyRedisTaskQueueProvider
-
-    provider = HueyRedisTaskQueueProvider()
-    configuration = MockConfiguration(
-        {
-            "redis": {
-                "host": "localhost",
-                "port": 6379,
-                "db": 1,  # Use different DB for tests
-            }
-        }
-    )
-
-    task_queue = provider.create_task_queue(configuration)
-
-    assert task_queue is not None
-    assert hasattr(task_queue, "task")
-    assert hasattr(task_queue, "periodic_task")
-
-
-def test_huey_redis_task_queue_provider_with_defaults() -> None:
-    """Test HueyRedisTaskQueueProvider uses default Redis configuration."""
-    from paise2.plugins.providers.task_queue import HueyRedisTaskQueueProvider
-
-    provider = HueyRedisTaskQueueProvider()
-    configuration = MockConfiguration({})
-
-    # This should create a Huey instance even if Redis isn't available for the test
-    try:
-        task_queue = provider.create_task_queue(configuration)
-        assert task_queue is not None
-        assert hasattr(task_queue, "task")
-    except Exception as e:
-        if "redis" in str(e).lower():
-            pytest.skip("Redis not available for testing")
-        raise

@@ -40,49 +40,42 @@ class TestPluginIsolationAndPartitioning:
         finally:
             plugin_system.stop()
 
-    def test_plugin_cache_isolation_by_partition(self) -> None:
+    @pytest.mark.asyncio
+    async def test_plugin_cache_isolation_by_partition(self) -> None:
         """Test that plugin cache access is isolated by partition key."""
+        test_plugin_manager = create_test_plugin_manager_with_mocks()
+        plugin_system = PluginSystem(test_plugin_manager)
 
-        @pytest.mark.asyncio
-        async def _test_cache_isolation() -> None:
-            test_plugin_manager = create_test_plugin_manager_with_mocks()
-            plugin_system = PluginSystem(test_plugin_manager)
+        try:
+            plugin_system.bootstrap()
+            await plugin_system.start_async()
 
-            try:
-                plugin_system.bootstrap()
-                await plugin_system.start_async()
+            cache = plugin_system.get_singletons().cache
 
-                cache = plugin_system.get_singletons().cache
+            # Different partitions should be isolated
+            cache_id1 = await cache.save("partition1", "content1", ".txt")
+            cache_id2 = await cache.save("partition2", "content2", ".txt")
+            cache_id3 = await cache.save("partition1", "content3", ".txt")
 
-                # Different partitions should be isolated
-                cache_id1 = await cache.save("partition1", "content1", ".txt")
-                cache_id2 = await cache.save("partition2", "content2", ".txt")
-                cache_id3 = await cache.save("partition1", "content3", ".txt")
+            # Should be able to retrieve content from correct partition
+            assert await cache.get(cache_id1) == "content1"
+            assert await cache.get(cache_id2) == "content2"
+            assert await cache.get(cache_id3) == "content3"
 
-                # Should be able to retrieve content from correct partition
-                assert await cache.get(cache_id1) == "content1"
-                assert await cache.get(cache_id2) == "content2"
-                assert await cache.get(cache_id3) == "content3"
+            # Partition operations should be isolated
+            partition1_ids = await cache.get_all("partition1")
+            partition2_ids = await cache.get_all("partition2")
 
-                # Partition operations should be isolated
-                partition1_ids = await cache.get_all("partition1")
-                partition2_ids = await cache.get_all("partition2")
+            assert cache_id1 in partition1_ids
+            assert cache_id3 in partition1_ids
+            assert cache_id2 not in partition1_ids
 
-                assert cache_id1 in partition1_ids
-                assert cache_id3 in partition1_ids
-                assert cache_id2 not in partition1_ids
+            assert cache_id2 in partition2_ids
+            assert cache_id1 not in partition2_ids
+            assert cache_id3 not in partition2_ids
 
-                assert cache_id2 in partition2_ids
-                assert cache_id1 not in partition2_ids
-                assert cache_id3 not in partition2_ids
-
-            finally:
-                plugin_system.stop()
-
-        # Run the async test
-        import asyncio
-
-        asyncio.run(_test_cache_isolation())
+        finally:
+            await plugin_system.stop_async()
 
     def test_plugin_configuration_isolation_through_namespacing(self) -> None:
         """Test that plugins can access configuration in isolated namespaces."""
@@ -152,7 +145,7 @@ class TestPluginIsolationAndPartitioning:
             assert retrieved2.source_url == "plugin2://document.txt"
 
         finally:
-            plugin_system.stop()
+            await plugin_system.stop_async()
 
     def test_plugin_versioning_for_state_isolation(self) -> None:
         """Test that plugin state versioning works for isolation and migration."""
@@ -266,7 +259,7 @@ class TestPluginSystemIntegration:
             assert await singletons.data_storage.find_item(item_id) is not None
 
         finally:
-            plugin_system.stop()
+            await plugin_system.stop_async()
 
     def test_plugin_system_restart_preserves_state(self) -> None:
         """Test that restarting the plugin system handles state correctly."""

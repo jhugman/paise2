@@ -239,7 +239,7 @@ class TestMockPluginSystemIntegration:
             assert isinstance(task_queue.huey, MemoryHuey)
 
         finally:
-            plugin_system.stop()
+            await plugin_system.stop_async()
 
     @pytest.mark.asyncio
     async def test_mock_plugin_cache_integration(self) -> None:
@@ -267,7 +267,7 @@ class TestMockPluginSystemIntegration:
             assert cache_id in partition_ids
 
         finally:
-            plugin_system.stop()
+            await plugin_system.stop_async()
 
     @pytest.mark.asyncio
     async def test_mock_plugin_data_storage_integration(self) -> None:
@@ -299,7 +299,7 @@ class TestMockPluginSystemIntegration:
             assert found_metadata.source_url == "test://doc.txt"
 
         finally:
-            plugin_system.stop()
+            await plugin_system.stop_async()
 
 
 class TestMockPluginDocumentationValue:

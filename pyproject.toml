@@ -16,7 +16,12 @@ dependencies = [
     "typing-extensions>=4.0.0",
     "pyyaml>=6.0.0",
     "huey>=2.5.3",
+    "click>=8.2.1",
+    "rich>=14.0.0",
 ]
+
+[project.scripts]
+paise2 = "paise2.cli:main"
 
 [project.optional-dependencies]
 test = [

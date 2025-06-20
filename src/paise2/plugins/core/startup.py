@@ -53,6 +53,77 @@ class StartupPhase:
     START = 5
 
 
+class SimpleStateManagerWrapper:
+    """Simple wrapper to make StateStorage compatible with StateManager protocol."""
+
+    def __init__(self, state_storage: StateStorage):
+        self._state_storage = state_storage
+        self._partition_key = "lifecycle"  # Default partition for lifecycle actions
+
+    def store(self, key: str, value: Any, version: int = 1) -> None:
+        """Store a value with automatic partitioning simulation."""
+        self._state_storage.store(self._partition_key, key, value, version)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Retrieve a value with automatic partitioning simulation."""
+        return self._state_storage.get(self._partition_key, key, default)
+
+    def exists(self, key: str) -> bool:
+        """Check if a key exists."""
+        # Since StateStorage doesn't have exists, check if value is not None
+        value = self._state_storage.get(self._partition_key, key, None)
+        return value is not None
+
+    def delete(self, key: str) -> bool:
+        """Delete a key."""
+        # StateStorage doesn't have delete, so we'll store None as a placeholder
+        # This is a temporary implementation
+        self._state_storage.store(self._partition_key, key, None)
+        return True
+
+    def get_versioned_state(
+        self, older_than_version: int
+    ) -> list[tuple[str, Any, int]]:
+        """Get all state entries older than a specific version."""
+        # Delegate to StateStorage with our partition
+        return self._state_storage.get_versioned_state(
+            self._partition_key, older_than_version
+        )
+
+    def get_all_keys_with_value(self, value: Any) -> list[str]:
+        """Find all keys that have a specific value."""
+        # Delegate to StateStorage with our partition
+        return self._state_storage.get_all_keys_with_value(self._partition_key, value)
+
+
+class LifecycleHostImpl:
+    """Implementation of LifecycleHost for plugin lifecycle actions."""
+
+    def __init__(self, singletons: Singletons):
+        self._singletons = singletons
+
+    @property
+    def logger(self) -> Logger:
+        """System logger for plugin use."""
+        return self._singletons.logger
+
+    @property
+    def configuration(self) -> Configuration:
+        """Merged system configuration."""
+        return self._singletons.configuration
+
+    @property
+    def state(self) -> SimpleStateManagerWrapper:
+        """State manager for plugin use."""
+        return SimpleStateManagerWrapper(self._singletons.state_storage)
+
+    def schedule_fetch(self, url: str) -> None:
+        """Schedule content to be fetched."""
+        # For now, we'll implement this as a placeholder
+        # The actual implementation will be completed in later parts
+        self._singletons.logger.debug("Content fetch scheduled: %s", url)
+
+
 class Singletons:
     """Container for application singletons created during startup."""
 
@@ -233,14 +304,91 @@ class StartupManager:
         self.bootstrap_logger.info("Phase 4: Singleton-using extensions loaded")
 
     async def _phase_5_start(self) -> None:
-        """Phase 5: Start the system."""
+        """Phase 5: Start the system and call lifecycle actions."""
         self.current_phase = StartupPhase.START
         self.bootstrap_logger.info("Phase 5: Starting system")
 
-        # System startup logic will be implemented in later prompts
-        # For now, just mark that startup is complete
+        # Call lifecycle actions only if singletons are available
+        if self.singletons is not None:
+            await self._call_lifecycle_actions_start()
+        else:
+            self.bootstrap_logger.info(
+                "Phase 5: Singletons not available, skipping lifecycle actions"
+            )
 
         self.bootstrap_logger.info("Phase 5: System started")
+
+    async def shutdown(self) -> None:
+        """Shutdown the system and call lifecycle actions."""
+        if self.singletons is None:
+            return
+
+        self.singletons.logger.info("Shutting down system")
+
+        # Call lifecycle actions on_stop
+        await self._call_lifecycle_actions_stop()
+
+        self.singletons.logger.info("System shutdown complete")
+
+    async def _call_lifecycle_actions_start(self) -> None:
+        """Call on_start for all registered lifecycle actions."""
+        if self.singletons is None:
+            return
+
+        lifecycle_actions = self.plugin_manager.get_lifecycle_actions()
+        if not lifecycle_actions:
+            self.singletons.logger.debug("No lifecycle actions registered")
+            return
+
+        self.singletons.logger.info(
+            "Calling on_start for %d lifecycle actions", len(lifecycle_actions)
+        )
+
+        # Create host for lifecycle actions
+        host = LifecycleHostImpl(self.singletons)
+
+        # Call each lifecycle action
+        for action in lifecycle_actions:
+            try:
+                await action.on_start(host)
+                self.singletons.logger.debug(
+                    "Lifecycle action %s started successfully", type(action).__name__
+                )
+            except Exception:  # noqa: PERF203
+                self.singletons.logger.exception(
+                    "Error starting lifecycle action %s", type(action).__name__
+                )
+                # Continue with other actions rather than failing completely
+
+    async def _call_lifecycle_actions_stop(self) -> None:
+        """Call on_stop for all registered lifecycle actions."""
+        if self.singletons is None:
+            return
+
+        lifecycle_actions = self.plugin_manager.get_lifecycle_actions()
+        if not lifecycle_actions:
+            self.singletons.logger.debug("No lifecycle actions registered")
+            return
+
+        self.singletons.logger.info(
+            "Calling on_stop for %d lifecycle actions", len(lifecycle_actions)
+        )
+
+        # Create host for lifecycle actions
+        host = LifecycleHostImpl(self.singletons)
+
+        # Call each lifecycle action in reverse order
+        for action in reversed(lifecycle_actions):
+            try:
+                await action.on_stop(host)
+                self.singletons.logger.debug(
+                    "Lifecycle action %s stopped successfully", type(action).__name__
+                )
+            except Exception:  # noqa: PERF203
+                self.singletons.logger.exception(
+                    "Error stopping lifecycle action %s", type(action).__name__
+                )
+                # Continue with other actions to ensure cleanup happens
 
     def _create_state_storage_singleton(
         self, configuration: Configuration

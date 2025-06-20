@@ -174,7 +174,7 @@ class TestCompleteStartupSequence:
             assert singletons.data_storage is not None
 
         finally:
-            plugin_system.stop()
+            await plugin_system.stop_async()
 
 
 class TestPluginSystemErrorHandling:
@@ -407,4 +407,4 @@ class TestPluginSystemValidation:
             assert item_id is not None
 
         finally:
-            plugin_system.stop()
+            await plugin_system.stop_async()

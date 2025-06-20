@@ -120,9 +120,49 @@ class PluginSystem:
             return
 
         try:
-            # Graceful shutdown will be implemented when needed
-            # For now, just reset state
-            pass
+            # Call lifecycle actions shutdown
+            if self._startup_manager is not None:
+                try:
+                    # Try to run shutdown, but handle if we're in an event loop
+                    asyncio.run(self._startup_manager.shutdown())
+                except RuntimeError as e:
+                    error_msg = (
+                        "asyncio.run() cannot be called from a running event loop"
+                    )
+                    if error_msg in str(e):
+                        # We're in an async context, but can't use asyncio.run()
+                        # Just warn and skip shutdown to avoid blocking
+                        try:
+                            import logging
+
+                            logging.getLogger(__name__).warning(
+                                "Skipping shutdown in running event loop context"
+                            )
+                        except ImportError:
+                            # Even logging import failed, just continue
+                            pass
+                    else:
+                        raise
+        finally:
+            # Always reset state
+            self._is_running = False
+            self._singletons = None
+
+    async def stop_async(self) -> None:
+        """
+        Stop the plugin system asynchronously and perform cleanup.
+
+        This method should be used when calling from an async context.
+        """
+        if not self._is_running:
+            self._is_running = False
+            self._singletons = None
+            return
+
+        try:
+            # Call lifecycle actions shutdown
+            if self._startup_manager is not None:
+                await self._startup_manager.shutdown()
         finally:
             # Always reset state
             self._is_running = False

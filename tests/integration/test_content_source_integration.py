@@ -33,7 +33,7 @@ class TestContentSourceIntegration:
             # ContentSource discovery will be tested in unit tests
             assert plugin_system.is_running()
         finally:
-            plugin_system.stop()
+            await plugin_system.stop_async()
 
     @pytest.mark.asyncio
     async def test_directory_watcher_content_source_lifecycle(self) -> None:
@@ -90,7 +90,7 @@ class TestContentSourceIntegration:
                 await source.stop_source(host)
 
             finally:
-                plugin_system.stop()
+                await plugin_system.stop_async()
 
     @pytest.mark.asyncio
     async def test_directory_watcher_content_discovery(self) -> None:
@@ -168,7 +168,7 @@ class TestContentSourceIntegration:
                     assert source_plugin == "DirectoryWatcherContentSource"
 
             finally:
-                plugin_system.stop()
+                await plugin_system.stop_async()
 
     @pytest.mark.asyncio
     async def test_directory_watcher_handles_missing_directory(self) -> None:
@@ -210,4 +210,4 @@ class TestContentSourceIntegration:
             # Then: Should return empty list without crashing
             assert content_items == []
         finally:
-            plugin_system.stop()
+            await plugin_system.stop_async()

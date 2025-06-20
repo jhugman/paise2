@@ -79,7 +79,7 @@ class TestPluginSystemPerformance:
             )
 
         finally:
-            plugin_system.stop()
+            await plugin_system.stop_async()
 
     def test_state_storage_performance_with_many_keys(self) -> None:
         """Test state storage performance with many keys and operations."""
@@ -168,7 +168,7 @@ class TestPluginSystemPerformance:
             assert retrieve_time < 0.2, f"Retrieving 50 items took {retrieve_time:.3f}s"
 
         finally:
-            plugin_system.stop()
+            await plugin_system.stop_async()
 
 
 class TestPluginSystemStressTesting:
@@ -293,7 +293,7 @@ class TestPluginSystemStressTesting:
             assert result_count > 0
 
         finally:
-            plugin_system.stop()
+            await plugin_system.stop_async()
 
     def test_memory_usage_stability_over_time(self) -> None:
         """Test that memory usage remains stable over extended operation."""
@@ -403,7 +403,7 @@ class TestPluginSystemResourceManagement:
         assert await singletons.cache.get(cache_id) == "test content"
 
         # Shutdown should clean up async resources
-        plugin_system.stop()
+        await plugin_system.stop_async()
         assert not plugin_system.is_running()
 
         # Should not be able to access async resources after shutdown
