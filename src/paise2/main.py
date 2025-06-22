@@ -27,6 +27,7 @@ class Application:
         self,
         profile: str = "test",
         user_config: dict[str, Any] | None = None,
+        plugin_manager: Any | None = None,
     ):
         """
         Initialize the application with the specified profile.
@@ -34,9 +35,14 @@ class Application:
         Args:
             profile: Profile to use ("test", "development", "production")
             user_config: Optional user configuration overrides
+            plugin_manager: Optional plugin manager instance. If not provided,
+                           one will be created based on the profile.
         """
-        self._profile = profile
         self._user_config = user_config
+
+        from paise2.profiles.factory import create_plugin_manager
+
+        self._plugin_manager = plugin_manager or create_plugin_manager(profile)
         self._plugin_system: PluginSystem | None = None
         self._is_running = False
 
@@ -47,25 +53,9 @@ class Application:
 
         # Import here to avoid circular dependencies
         from paise2.plugins.core.manager import PluginSystem
-        from paise2.profiles.factory import (
-            create_development_plugin_manager,
-            create_production_plugin_manager,
-            create_test_plugin_manager,
-        )
-
-        # Create plugin manager based on profile
-        if self._profile == "test":
-            plugin_manager = create_test_plugin_manager()
-        elif self._profile == "development":
-            plugin_manager = create_development_plugin_manager()
-        elif self._profile == "production":
-            plugin_manager = create_production_plugin_manager()
-        else:
-            error_msg = f"Unknown profile: {self._profile}"
-            raise ValueError(error_msg)
 
         # Create and start plugin system
-        self._plugin_system = PluginSystem(plugin_manager)
+        self._plugin_system = PluginSystem(self._plugin_manager)
         self._plugin_system.bootstrap()
         self._plugin_system.start(user_config_dict=self._user_config)
         self._is_running = True

@@ -15,7 +15,6 @@ from paise2.plugins.core.startup import (
     StartupError,
     StartupManager,
     StartupPhase,
-    create_test_startup_manager,
 )
 from paise2.utils.logging import SimpleInMemoryLogger
 from tests.fixtures.mock_plugins import (
@@ -54,6 +53,15 @@ class MockTaskQueueProvider:
             results=True,
             utc=True,
         )
+
+
+# Factory functions for common startup patterns
+def create_test_startup_manager() -> StartupManager:
+    """Create a startup manager configured for testing."""
+    from paise2.profiles.factory import create_test_plugin_manager
+
+    plugin_manager = create_test_plugin_manager()
+    return StartupManager(plugin_manager)
 
 
 class TestSingletons:

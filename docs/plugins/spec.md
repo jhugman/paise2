@@ -513,6 +513,55 @@ class WorkerLifecycleAction:
             process.wait()
 ```
 
+#### CLI Commands
+
+CLI Commands allow plugins to contribute commands to the main CLI interface. The system loads the global plugin manager and makes it available to CLI commands.
+
+```python
+import click
+
+def register_commands(cli: click.Group) -> None:
+    """Register CLI commands with the main CLI group."""
+
+    @click.command()
+    @click.option("--verbose", is_flag=True, help="Enable verbose output")
+    def my_command(verbose: bool) -> None:
+        """Custom command provided by plugin."""
+        from paise2.cli import get_plugin_manager
+
+        plugin_manager = get_plugin_manager()
+        # Use plugin manager for command implementation
+        click.echo("Command executed with plugin manager access")
+
+    cli.add_command(my_command)
+```
+
+Example implementations:
+
+```python
+from paise2.plugins.core.registry import hookimpl
+
+@hookimpl
+def register_commands(cli: click.Group) -> None:
+    """Register export commands."""
+
+    @click.command()
+    @click.option("--format", type=click.Choice(["json", "csv"]), default="json")
+    def export(format: str) -> None:
+        """Export indexed content in specified format."""
+        from paise2.cli import get_plugin_manager
+        from paise2.main import Application
+
+        plugin_manager = get_plugin_manager()
+        app = Application(plugin_manager=plugin_manager)
+
+        with app:
+            # Export logic here
+            pass
+
+    cli.add_command(export)
+```
+
 ## Extension Registration
 
 Extensions are registered using pluggy's native approach with separate registration hooks for each extension type:
@@ -523,6 +572,8 @@ from typing import Callable
 class Plugin:
     @hookimpl
     def register_lifecycle_action(self, register: Callable[[LifecycleAction], None]) -> None: ...
+    @hookimpl
+    def register_commands(self, cli: click.Group) -> None: ...
     @hookimpl
     def register_configuration_provider(self, register: Callable[[ConfigurationProvider], None]) -> None: ...
     @hookimpl

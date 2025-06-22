@@ -96,20 +96,10 @@ class TestMainApplication:
     def test_application_error_handling_during_startup(self) -> None:
         """Test that application handles startup errors gracefully."""
         # Test with an invalid profile that should cause startup failure
-        app = Application(profile="invalid_profile_that_does_not_exist")
 
-        try:
-            # This should raise an error since the profile doesn't exist
-            with pytest.raises(ValueError, match="Unknown profile"):
-                app.start()
-
-            # Application should not be running after failed start
-            assert not app.is_running()
-
-        finally:
-            # Ensure clean state even after error
-            if app.is_running():
-                app.stop()
+        # This should raise an error since the profile doesn't exist
+        with pytest.raises(ValueError, match="Unknown profile"):
+            _ = Application(profile="invalid_profile_that_does_not_exist")
 
     def test_application_lifecycle_with_context_manager(self) -> None:
         """Test that Application can be used as a context manager."""

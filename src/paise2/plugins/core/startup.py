@@ -486,28 +486,3 @@ class StartupManager:
             )
 
         self.bootstrap_logger.info("Bootstrap logs replayed")
-
-
-# Factory functions for common startup patterns
-def create_test_startup_manager() -> StartupManager:
-    """Create a startup manager configured for testing."""
-    from paise2.profiles.factory import create_test_plugin_manager
-
-    plugin_manager = create_test_plugin_manager()
-    return StartupManager(plugin_manager)
-
-
-def create_development_startup_manager() -> StartupManager:
-    """Create a startup manager configured for development."""
-    from paise2.profiles.factory import create_development_plugin_manager
-
-    plugin_manager = create_development_plugin_manager()
-    return StartupManager(plugin_manager)
-
-
-def create_production_startup_manager() -> StartupManager:
-    """Create a startup manager configured for production."""
-    from paise2.profiles.factory import create_production_plugin_manager
-
-    plugin_manager = create_production_plugin_manager()
-    return StartupManager(plugin_manager)

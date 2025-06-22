@@ -8,11 +8,14 @@ import importlib
 import inspect
 import logging
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 import pluggy
 
 import paise2
+
+if TYPE_CHECKING:
+    import click
 from paise2.plugins.core.interfaces import (
     CacheProvider,
     ConfigurationProvider,
@@ -88,6 +91,10 @@ class PluginHooks:
         self, register: Callable[[CacheProvider], None]
     ) -> None:
         """Register a cache provider."""
+
+    @hookspec
+    def register_commands(self, cli: click.Group) -> None:
+        """Register CLI commands with the main CLI group."""
 
 
 class PluginManager:
@@ -256,6 +263,11 @@ class PluginManager:
             register=self._register_state_storage_provider
         )
         self.pm.hook.register_cache_provider(register=self._register_cache_provider)
+
+    def load_cli_commands(self, cli: click.Group) -> None:
+        """Load CLI command extensions from plugins."""
+        # Call the CLI registration hook directly with the CLI group
+        self.pm.hook.register_commands(cli=cli)
 
     # Registration callback functions
     def _register_configuration_provider(self, provider: ConfigurationProvider) -> None:
