@@ -61,17 +61,17 @@ Integration points:
 ```
 
 ### Task List
-- [ ] Create `src/paise2/profiles/common/workers/config.py` with worker configuration provider
-- [ ] Add worker configuration schema to match existing configuration patterns
-- [ ] Create default worker configurations for development and production profiles
-- [ ] Add worker configuration validation and error handling
-- [ ] Update existing configuration files to include worker settings
-- [ ] Create tests for worker configuration loading and validation
-- [ ] Verify configuration merging works correctly with existing system
-- [ ] Test profile-specific worker configuration behavior
-- [ ] Ensure backward compatibility with existing configurations
-- [ ] Document worker configuration options and defaults
-- [ ] **PROMPT 1 COMPLETE**
+- [x] Create `src/paise2/profiles/common/workers/config.py` with worker configuration provider
+- [x] Add worker configuration schema to match existing configuration patterns
+- [x] Create default worker configurations for development and production profiles
+- [x] Add worker configuration validation and error handling
+- [x] Update existing configuration files to include worker settings
+- [x] Create tests for worker configuration loading and validation
+- [x] Verify configuration merging works correctly with existing system
+- [x] Test profile-specific worker configuration behavior
+- [x] Ensure backward compatibility with existing configurations
+- [x] Document worker configuration options and defaults
+- [x] **PROMPT 1 COMPLETE ✅**
 
 ---
 
@@ -112,17 +112,17 @@ Integration requirements:
 ```
 
 ### Task List
-- [ ] Create `src/paise2/workers/context.py` with worker context management
-- [ ] Implement worker context initialization using @huey.on_startup() hooks
-- [ ] Add profile propagation mechanism using PAISE2_PROFILE environment variable
-- [ ] Create thread-local storage for worker context (ThreadContextManager)
-- [ ] Implement worker context cleanup and resource management
-- [ ] Add proper logging and error handling for worker initialization
-- [ ] Create worker context access helpers for task functions
-- [ ] Test worker context initialization with different profiles
-- [ ] Verify complete application context recreation in workers
-- [ ] Test error handling and recovery in worker context setup
-- [ ] **PROMPT 2 COMPLETE**
+- [x] Create `src/paise2/workers/context.py` with worker context management
+- [x] Implement worker context initialization using @huey.on_startup() hooks
+- [x] Add profile propagation mechanism using PAISE2_PROFILE environment variable
+- [x] Create thread-local storage for worker context (ThreadContextManager)
+- [x] Implement worker context cleanup and resource management
+- [x] Add proper logging and error handling for worker initialization
+- [x] Create worker context access helpers for task functions
+- [x] Test worker context initialization with different profiles
+- [x] Verify complete application context recreation in workers
+- [x] Test error handling and recovery in worker context setup
+- [x] **PROMPT 2 COMPLETE ✅**
 
 ---
 
