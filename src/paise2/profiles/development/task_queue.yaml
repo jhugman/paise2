@@ -1,0 +1,2 @@
+task_queue:
+  sqlite_path: ~/.local/share/paise2/tasks-dev.db

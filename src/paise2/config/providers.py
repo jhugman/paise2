@@ -22,7 +22,12 @@ class FileConfigurationProvider(ConfigurationProvider):
     relative paths are resolved relative to the plugin module's directory.
     """
 
-    def __init__(self, file_path: str, plugin_module: ModuleType | None = None):
+    def __init__(
+        self,
+        file_path: str,
+        plugin_module: ModuleType | None = None,
+        config_id: str | None = None,
+    ):
         """
         Initialize FileConfigurationProvider.
 
@@ -38,7 +43,7 @@ class FileConfigurationProvider(ConfigurationProvider):
         else:
             self.file_path = file_path
 
-        self._config_id = Path(file_path).name
+        self._config_id = config_id or Path(file_path).name
 
     def get_default_configuration(self) -> str:
         """
