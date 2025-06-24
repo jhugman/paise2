@@ -32,8 +32,11 @@ def _base_profile() -> Path:
 
 def _create_plugin_manager(profile: str) -> PluginManager:
     root = _profile(profile)
-    plugin_manager = PluginManager(profile=str(root))
+    plugin_manager = PluginManager()
+    # Discover base plugins first (core functionality)
     plugin_manager.discover_internal_plugins(_base_profile())
+    # Then discover profile-specific plugins (profile customizations)
+    plugin_manager.discover_internal_plugins(root)
     return plugin_manager
 
 

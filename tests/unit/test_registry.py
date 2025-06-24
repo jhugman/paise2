@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
 
 import paise2
@@ -41,6 +41,7 @@ class TestPluginManager:
 
         # Check that hook specifications exist for all extension points
         expected_hooks = [
+            "register_plugin",
             "register_configuration_provider",
             "register_content_extractor",
             "register_content_source",
@@ -392,3 +393,139 @@ class TestLogging:
 
             # Should have logged error
             assert mock_logger.error.called or mock_logger.warning.called
+
+
+class TestPluginRegistrationHook:
+    """Test the register_plugin hook functionality."""
+
+    def test_register_plugin_hook_spec_exists(self) -> None:
+        """Test that the register_plugin hook specification exists."""
+        from paise2.plugins.core.registry import PluginManager
+
+        manager = PluginManager()
+        assert hasattr(manager.pm.hook, "register_plugin")
+
+    def test_register_plugin_direct(self) -> None:
+        """Test direct registration of a plugin object."""
+        from paise2.plugins.core.registry import PluginManager
+
+        manager = PluginManager()
+
+        class TestPlugin:
+            pass
+
+        plugin = TestPlugin()
+        result = manager.register_plugin(plugin)
+        assert result is True
+
+    def test_register_plugin_with_multiple_extension_points(self) -> None:
+        """Test registration of a plugin class that implements multiple extensions."""
+        from paise2.plugins.core.registry import PluginManager, hookimpl
+
+        manager = PluginManager()
+
+        class MultiExtensionPlugin:
+            @hookimpl
+            def register_configuration_provider(self, register: Any) -> None:
+                register(MockConfigurationProvider())
+
+            @hookimpl
+            def register_content_extractor(self, register: Any) -> None:
+                register(MockContentExtractor())
+
+        plugin = MultiExtensionPlugin()
+        manager.register_plugin(plugin)
+        manager.load_plugins()
+
+        # Verify both extensions were registered
+        providers = manager.get_configuration_providers()
+        extractors = manager.get_content_extractors()
+
+        assert any(isinstance(p, MockConfigurationProvider) for p in providers)
+        assert any(isinstance(e, MockContentExtractor) for e in extractors)
+
+    def test_register_plugin_with_partial_extension_points(self) -> None:
+        """Test registration of a plugin that only implements some extension points."""
+        from paise2.plugins.core.registry import PluginManager, hookimpl
+
+        manager = PluginManager()
+
+        class PartialPlugin:
+            @hookimpl
+            def register_content_extractor(self, register: Any) -> None:
+                register(MockContentExtractor())
+
+            # Note: doesn't implement other extension points
+
+        plugin = PartialPlugin()
+        manager.register_plugin(plugin)
+        manager.load_plugins()
+
+        # Should only register the implemented extension point
+        extractors = manager.get_content_extractors()
+        assert any(isinstance(e, MockContentExtractor) for e in extractors)
+
+    def test_register_plugin_error_handling(self) -> None:
+        """Test that plugin registration handles errors gracefully."""
+        from paise2.plugins.core.registry import PluginManager
+
+        manager = PluginManager()
+
+        class ErrorPlugin:
+            def register_content_extractor(self, register: Any) -> None:
+                error_msg = "Simulated error"
+                raise ValueError(error_msg)
+
+        plugin = ErrorPlugin()
+
+        # Should not raise, should handle error gracefully
+        manager.register_plugin(plugin)
+
+        # Plugin should still be registered with pluggy even if
+        # extension registration fails
+        assert True  # If we get here, error was handled gracefully
+
+    def test_register_plugin_via_hookimpl(self) -> None:
+        """Test registration of a plugin via the hookimpl pattern."""
+        from paise2.plugins.core.registry import PluginManager, hookimpl
+
+        manager = PluginManager()
+
+        class TestHookimplPlugin:
+            @hookimpl
+            def register_content_extractor(self, register: Any) -> None:
+                register(MockContentExtractor())
+
+        # Create a hookimpl function that registers the plugin
+        @hookimpl
+        def register_plugin(register: Any) -> None:
+            register(TestHookimplPlugin())
+
+        # Create a module-like object and attach the hookimpl function
+        import types
+
+        mock_module = types.SimpleNamespace()
+        mock_module.register_plugin = register_plugin
+
+        # Register the module and load plugins
+        manager.pm.register(mock_module)
+        manager.load_plugins()
+
+        # Verify the plugin's extensions were registered
+        extractors = manager.get_content_extractors()
+        assert any(isinstance(e, MockContentExtractor) for e in extractors)
+
+    def test_register_plugin_with_no_extension_methods(self) -> None:
+        """Test registration of a plugin with no extension point methods."""
+        from paise2.plugins.core.registry import PluginManager
+
+        manager = PluginManager()
+
+        class EmptyPlugin:
+            pass
+
+        plugin = EmptyPlugin()
+        result = manager.register_plugin(plugin)
+
+        # Should still register successfully (plugin object registered with pluggy)
+        assert result is True

@@ -39,6 +39,10 @@ class PluginHooks:
     """Plugin hook specifications."""
 
     @hookspec
+    def register_plugin(self, register: Callable[[Any], None]) -> None:
+        """Register a plugin class that implements multiple extension points."""
+
+    @hookspec
     def register_configuration_provider(
         self, register: Callable[[ConfigurationProvider], None]
     ) -> None:
@@ -243,6 +247,9 @@ class PluginManager:
 
     def load_plugins(self) -> None:
         """Load all discovered plugins and call their registration hooks."""
+        # Call plugin registration hook first
+        self.pm.hook.register_plugin(register=self._register_plugin)
+
         # Call registration hooks with callback functions
         self.pm.hook.register_configuration_provider(
             register=self._register_configuration_provider
@@ -270,6 +277,11 @@ class PluginManager:
         self.pm.hook.register_commands(cli=cli)
 
     # Registration callback functions
+    def _register_plugin(self, plugin: Any) -> None:
+        """Register a plugin object and register it with the plugin manager."""
+        # Register the plugin object itself with pluggy
+        self.pm.register(plugin)
+
     def _register_configuration_provider(self, provider: ConfigurationProvider) -> None:
         """Register a configuration provider."""
         if self._validate_and_log(provider, ConfigurationProvider):
@@ -378,6 +390,12 @@ class PluginManager:
             self._cache_providers.append(provider)
             return True
         return False
+
+    def register_plugin(self, plugin: Any) -> bool:
+        """Register a plugin object directly."""
+        # Register the plugin object with pluggy
+        self.pm.register(plugin)
+        return True
 
     # Plugin access methods
     def get_configuration_providers(self) -> list[ConfigurationProvider]:

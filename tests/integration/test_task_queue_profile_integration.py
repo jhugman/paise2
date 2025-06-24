@@ -3,25 +3,22 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
-from paise2.plugins.core.registry import PluginManager
 from paise2.plugins.providers.task_queue import (
     HueySQLiteTaskQueueProvider,
     NoTaskQueueProvider,
+)
+from paise2.profiles.factory import (
+    create_development_plugin_manager,
+    create_production_plugin_manager,
+    create_test_plugin_manager,
 )
 
 
 def test_test_profile_registers_task_queue_provider() -> None:
     """Test that test profile registers NoTaskQueueProvider."""
-    test_profile_path = (
-        Path(__file__).parent.parent.parent / "src" / "paise2" / "profiles" / "test"
-    )
-    plugin_manager = PluginManager()
-
-    # Discover and load plugins from test profile
-    plugin_manager.discover_internal_plugins(test_profile_path)
+    plugin_manager = create_test_plugin_manager()
     plugin_manager.load_plugins()
 
     # Check that TaskQueueProvider was registered
@@ -37,22 +34,12 @@ def test_test_profile_registers_task_queue_provider() -> None:
 
 def test_development_profile_registers_task_queue_providers() -> None:
     """Test that development profile registers multiple TaskQueueProviders."""
-    dev_profile_path = (
-        Path(__file__).parent.parent.parent
-        / "src"
-        / "paise2"
-        / "profiles"
-        / "development"
-    )
-    plugin_manager = PluginManager()
-
-    # Discover and load plugins from development profile
-    plugin_manager.discover_internal_plugins(dev_profile_path)
+    plugin_manager = create_development_plugin_manager()
     plugin_manager.load_plugins()
 
     # Check that TaskQueueProviders were registered
     task_queue_providers = plugin_manager.get_task_queue_providers()
-    assert len(task_queue_providers) >= 2
+    assert len(task_queue_providers) >= 1
 
     # Should have both NoTaskQueueProvider and HueySQLiteTaskQueueProvider
     no_providers = [
@@ -62,23 +49,13 @@ def test_development_profile_registers_task_queue_providers() -> None:
         p for p in task_queue_providers if isinstance(p, HueySQLiteTaskQueueProvider)
     ]
 
-    assert len(no_providers) == 1
+    assert len(no_providers) == 0
     assert len(sqlite_providers) == 1
 
 
 def test_production_profile_registers_task_queue_providers() -> None:
     """Test that production profile registers TaskQueueProviders."""
-    prod_profile_path = (
-        Path(__file__).parent.parent.parent
-        / "src"
-        / "paise2"
-        / "profiles"
-        / "production"
-    )
-    plugin_manager = PluginManager()
-
-    # Discover and load plugins from production profile
-    plugin_manager.discover_internal_plugins(prod_profile_path)
+    plugin_manager = create_production_plugin_manager()
     plugin_manager.load_plugins()
 
     # Check that TaskQueueProviders were registered

@@ -57,6 +57,7 @@ ignore = [
     "COM812", "ISC001",  # Conflict with ruff format
     "S101",  # Use of assert detected (needed for pytest)
     "DTZ005",  # datetime.now() without tz (ok for tests)
+    "PLC0415",  # Import should be at top-level (many imports are in functions to avoid circular deps)
 ]
 
 [tool.ruff.lint.per-file-ignores]

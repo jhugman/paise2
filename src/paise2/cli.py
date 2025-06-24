@@ -65,8 +65,10 @@ def main() -> None:
         from paise2.profiles.factory import create_plugin_manager_from_env
 
         # Create plugin manager based on PAISE2_PROFILE environment variable
+        # Factory handles discovery of both base and profile-specific plugins
         plugin_manager = create_plugin_manager_from_env()
-        plugin_manager.discover_plugins()
+
+        # Load discovered plugins and register CLI commands
         plugin_manager.load_plugins()
         plugin_manager.load_cli_commands(cli)
 

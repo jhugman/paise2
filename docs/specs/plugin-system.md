@@ -236,6 +236,34 @@ def register_commands(cli: click.Group) -> None:
         click.echo("Hello from plugin!")
 ```
 
+You can also register multiple extensions from the plugin:
+
+```python
+from paise2 import hookimpl
+
+class MyPlugin:
+    def register_configuration_provider(
+        self,
+        register: Callable[[ConfigurationProvider], None]
+    ) -> None:
+        register(
+            FileConfigurationProvider(
+                "content_fetcher.yaml",
+                plugin_module=sys.modules[__name__]
+            )
+        )
+
+    def register_content_fetcher(
+        self,
+        register: Callable[[ContentFetcher], None]
+    ) -> None:
+        register(MyContentFetcher())
+
+@hookimpl
+def register_plugin(register: Callable[[Any], None]) -> None:
+    register(MyPlugin())
+```
+
 ## Configuration System
 
 ### Configuration Merging
