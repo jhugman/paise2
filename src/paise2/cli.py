@@ -68,12 +68,12 @@ def main() -> None:
         # Factory handles discovery of both base and profile-specific plugins
         plugin_manager = create_plugin_manager_from_env()
 
+        # Set global plugin manager for CLI commands to use
+        _set_plugin_manager(plugin_manager)
+
         # Load discovered plugins and register CLI commands
         plugin_manager.load_plugins()
         plugin_manager.load_cli_commands(cli)
-
-        # Set global plugin manager for CLI commands to use
-        _set_plugin_manager(plugin_manager)
     except Exception as e:
         # Log plugin loading errors but don't fail CLI startup
         logger.debug("Failed to load plugin system: %s", e)

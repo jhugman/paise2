@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import yaml
@@ -28,6 +29,12 @@ class ConfigurationFactory:
     2. Merges plugin configurations using defined rules
     3. Applies user configuration overrides
     4. Returns a single Configuration instance for the application
+
+    Also provides configuration management operations for CLI:
+    - List available configurations with override status
+    - Show merged configuration data
+    - Create/edit configuration override files
+    - Reset configuration overrides
     """
 
     def __init__(self, config_manager: ConfigurationManager | None = None):
@@ -170,6 +177,190 @@ class ConfigurationFactory:
         # Step 4: Create configuration instance
         return ConcreteConfiguration(final_config)
 
+    def list_configurations(
+        self, plugin_manager: PluginManager, include_details: bool = False
+    ) -> list[dict[str, Any]] | list[str]:
+        """
+        List all available configuration provider IDs.
+
+        Args:
+            plugin_manager: Plugin manager with registered providers
+            include_details: If True, return detailed info including override status
+
+        Returns:
+            List of config IDs or detailed configuration info
+        """
+        providers = plugin_manager.get_configuration_providers()
+
+        if not providers:
+            return []
+
+        if include_details:
+            config_dir = self._config_manager.get_config_dir()
+            configs = []
+
+            for provider in providers:
+                config_id = provider.get_configuration_id()
+                override_file = Path(config_dir) / f"{config_id}.yaml"
+
+                configs.append(
+                    {
+                        "id": config_id,
+                        "has_override": override_file.exists(),
+                        "plugin": getattr(provider, "__module__", "unknown"),
+                    }
+                )
+
+            return configs
+
+        return [provider.get_configuration_id() for provider in providers]
+
+    def show_configurations(
+        self, plugin_manager: PluginManager, config_ids: list[str] | None = None
+    ) -> dict[str, Any]:
+        """
+        Show current merged configuration state.
+
+        Args:
+            plugin_manager: Plugin manager with registered providers
+            config_ids: Optional list of specific config IDs to show
+
+        Returns:
+            Dictionary containing merged configuration data
+
+        Raises:
+            ValueError: If any requested config ID is not found
+        """
+        # Load the merged configuration
+        configuration = self.load_initial_configuration(plugin_manager)
+
+        if config_ids:
+            # Validate that all requested config IDs exist
+            available_ids = self._get_available_config_ids(plugin_manager)
+            self._validate_config_ids(config_ids, available_ids)
+
+            # Return only requested configurations
+            config_data = {}
+            for config_id in config_ids:
+                value = configuration.get(config_id)
+                if value is not None:
+                    config_data[config_id] = value
+            return config_data
+
+        # Return all configuration data
+        config_data = {}
+        providers = plugin_manager.get_configuration_providers()
+        for provider in providers:
+            config_id = provider.get_configuration_id()
+            value = configuration.get(config_id)
+            if value is not None:
+                config_data[config_id] = value
+        return config_data
+
+    def prepare_config_for_editing(
+        self, plugin_manager: PluginManager, config_id: str
+    ) -> tuple[Path, bool]:
+        """
+        Prepare a configuration file for editing.
+
+        Creates the override file if it doesn't exist, copying from the default
+        configuration. Returns the path to the file and whether it was created.
+
+        Args:
+            plugin_manager: Plugin manager with registered providers
+            config_id: Configuration ID to prepare for editing
+
+        Returns:
+            Tuple of (path to config file, whether file was newly created)
+
+        Raises:
+            ValueError: If the config ID is not found
+        """
+        # Find the provider
+        provider = self._find_configuration_provider(plugin_manager, config_id)
+        if not provider:
+            available_ids = self._get_available_config_ids(plugin_manager)
+            expected_path = self._config_manager.get_config_file(config_id)
+            error_msg = (
+                f"Configuration provider '{config_id}' not found. "
+                f"Expected override file path: {expected_path}. "
+                f"Available IDs: {', '.join(sorted(available_ids))}"
+            )
+            raise ValueError(error_msg)
+
+        # Determine the override file path
+        override_file = Path(self._config_manager.get_config_file(config_id))
+
+        # Create config directory if it doesn't exist
+        override_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Check if override file exists
+        file_existed = override_file.exists()
+
+        # If override file doesn't exist, create it from default
+        if not file_existed:
+            default_config = provider.get_default_configuration()
+            override_file.write_text(default_config, encoding="utf-8")
+
+        return override_file, not file_existed
+
+    def reset_configurations(
+        self,
+        plugin_manager: PluginManager,
+        config_id: str | None = None,
+        reset_all: bool = False,
+    ) -> list[str]:
+        """
+        Reset configuration override files by deleting them.
+
+        Args:
+            plugin_manager: Plugin manager with registered providers
+            config_id: Specific configuration ID to reset (if not reset_all)
+            reset_all: If True, reset all configuration overrides
+
+        Returns:
+            List of configuration files that were deleted
+
+        Raises:
+            ValueError: If neither config_id nor reset_all is specified,
+                       or if both are specified, or if config_id is not found
+        """
+        if reset_all and config_id:
+            msg = "Cannot specify both config_id and reset_all"
+            raise ValueError(msg)
+
+        if not reset_all and not config_id:
+            msg = "Must specify either config_id or reset_all"
+            raise ValueError(msg)
+
+        config_dir = Path(self._config_manager.get_config_dir())
+        deleted_files = []
+
+        if reset_all:
+            # Delete all .yaml files in config directory
+            yaml_files = list(config_dir.glob("*.yaml"))
+
+            for yaml_file in yaml_files:
+                yaml_file.unlink()
+                deleted_files.append(yaml_file.name)
+
+        else:
+            # Reset specific configuration
+            available_ids = self._get_available_config_ids(plugin_manager)
+            if config_id not in available_ids:
+                error_msg = (
+                    f"Configuration ID '{config_id}' not found. "
+                    f"Available IDs: {', '.join(sorted(available_ids))}"
+                )
+                raise ValueError(error_msg)
+
+            override_file = config_dir / f"{config_id}.yaml"
+            if override_file.exists():
+                override_file.unlink()
+                deleted_files.append(override_file.name)
+
+        return deleted_files
+
     def _collect_plugin_configurations(
         self, plugin_manager: PluginManager
     ) -> list[ConfigurationDict | None]:
@@ -278,3 +469,32 @@ class ConfigurationFactory:
 
         # No user overrides
         return plugin_config
+
+    # Helper methods for configuration management
+
+    def _get_available_config_ids(self, plugin_manager: PluginManager) -> set[str]:
+        """Get set of all available configuration IDs."""
+        providers = plugin_manager.get_configuration_providers()
+        return {provider.get_configuration_id() for provider in providers}
+
+    def _validate_config_ids(
+        self, config_ids: list[str], available_ids: set[str]
+    ) -> None:
+        """Validate that all requested config IDs exist."""
+        for config_id in config_ids:
+            if config_id not in available_ids:
+                error_msg = (
+                    f"Configuration ID '{config_id}' not found. "
+                    f"Available IDs: {', '.join(sorted(available_ids))}"
+                )
+                raise ValueError(error_msg)
+
+    def _find_configuration_provider(
+        self, plugin_manager: PluginManager, config_id: str
+    ) -> Any | None:
+        """Find the configuration provider for a given config ID."""
+        providers = plugin_manager.get_configuration_providers()
+        for provider in providers:
+            if provider.get_configuration_id() == config_id:
+                return provider
+        return None

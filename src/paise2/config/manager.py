@@ -107,6 +107,9 @@ class ConfigurationManager:
         config_dir = os.environ.get("PAISE_CONFIG_DIR", "~/.config/paise2")
         return str(Path(config_dir).expanduser())
 
+    def get_config_file(self, config_id: str) -> str:
+        return str(Path(self.get_config_dir()) / f"{config_id}.yaml")
+
     def load_configuration_file(self, file_path: str) -> ConfigurationDict:
         """
         Load configuration from a YAML file.

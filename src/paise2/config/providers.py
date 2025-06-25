@@ -43,7 +43,7 @@ class FileConfigurationProvider(ConfigurationProvider):
         else:
             self.file_path = file_path
 
-        self._config_id = config_id or Path(file_path).name
+        self._config_id = config_id or Path(file_path).stem
 
     def get_default_configuration(self) -> str:
         """

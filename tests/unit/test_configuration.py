@@ -61,7 +61,7 @@ class TestFileConfigurationProvider(unittest.TestCase):
         from paise2.config.providers import FileConfigurationProvider
 
         provider = FileConfigurationProvider(str(self.config_file))
-        assert provider.get_configuration_id() == "test_config.yaml"
+        assert provider.get_configuration_id() == "test_config"
 
     def test_file_configuration_provider_load_yaml(self) -> None:
         """Test loading YAML configuration from file."""
