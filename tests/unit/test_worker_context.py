@@ -156,9 +156,6 @@ class TestWorkerContextInitialization:
         # Initialize worker context
         initialize_worker_context()
 
-        # Verify Application was created with correct profile
-        mock_application_class.assert_called_once_with(profile="test")
-
         # Verify app was started
         mock_app.start.assert_called_once()
 
@@ -171,26 +168,6 @@ class TestWorkerContextInitialization:
         # Verify context was set
         context = get_worker_context()
         assert context.singletons is mock_singletons
-
-    @patch("paise2.main.Application")
-    @patch.dict(os.environ, {}, clear=True)  # Clear PAISE2_PROFILE
-    def test_initialize_worker_context_default_profile(
-        self, mock_application_class: Mock
-    ) -> None:
-        """Test worker context initialization with default profile."""
-        # Setup mocks
-        mock_app = Mock()
-        mock_singletons = Mock()
-        mock_singletons.logger = Mock()
-
-        mock_app.get_singletons.return_value = mock_singletons
-        mock_application_class.return_value = mock_app
-
-        # Initialize worker context
-        initialize_worker_context()
-
-        # Verify Application was created with development profile
-        mock_application_class.assert_called_once_with(profile="development")
 
     @patch("paise2.main.Application")
     def test_initialize_worker_context_application_failure(
@@ -217,32 +194,6 @@ class TestWorkerContextInitialization:
         # Should raise RuntimeError
         with pytest.raises(RuntimeError, match="Worker context initialization failed"):
             initialize_worker_context()
-
-    @patch("paise2.main.Application")
-    def test_initialize_worker_context_profile_propagation(
-        self, mock_application_class: Mock
-    ) -> None:
-        """Test that profile is correctly propagated from environment."""
-        # Setup mocks
-        mock_app = Mock()
-        mock_singletons = Mock()
-        mock_singletons.logger = Mock()
-
-        mock_app.get_singletons.return_value = mock_singletons
-        mock_application_class.return_value = mock_app
-
-        profiles = ["test", "development", "production"]
-
-        for profile in profiles:
-            with patch.dict(os.environ, {"PAISE2_PROFILE": profile}):
-                # Reset mock for each iteration
-                mock_application_class.reset_mock()
-
-                # Initialize worker context
-                initialize_worker_context()
-
-                # Verify correct profile was used
-                mock_application_class.assert_called_once_with(profile=profile)
 
 
 class TestWorkerContextCleanup:

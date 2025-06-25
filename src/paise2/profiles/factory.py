@@ -11,13 +11,8 @@ from paise2.plugins.core.registry import PluginManager
 
 def create_plugin_manager(profile: str) -> PluginManager:
     # Create plugin manager based on profile
-    if profile == "test":
-        return create_test_plugin_manager()
-    if profile == "development":
-        return create_development_plugin_manager()
-    if profile == "production":
-        return create_production_plugin_manager()
-
+    if profile in ["test", "development", "production"]:
+        return _create_plugin_manager(profile)
     error_msg = f"Unknown profile: {profile}"
     raise ValueError(error_msg)
 

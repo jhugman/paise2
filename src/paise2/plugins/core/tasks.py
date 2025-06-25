@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
+from paise2.workers.context import get_worker_singletons
+
 if TYPE_CHECKING:
     from huey import Huey
     from huey.api import Result as HueyResult
@@ -48,7 +50,7 @@ class TaskQueue:
         return self._tasks["cleanup_cache"](cache_ids)
 
 
-def _setup_tasks(huey: Huey, singletons: Singletons) -> dict[str, Callable]:
+def _setup_tasks(huey: Huey, app_singletons: Singletons) -> dict[str, Callable]:
     """
     Define tasks with the provided Huey instance and singletons.
 
@@ -63,23 +65,50 @@ def _setup_tasks(huey: Huey, singletons: Singletons) -> dict[str, Callable]:
         Dict mapping task names to task functions. Empty dict for sync execution.
     """
 
+    # Register worker context initialization hook
+    @huey.on_startup()  # type: ignore[misc]
+    def startup_worker_context() -> None:
+        """Initialize worker context when worker process starts."""
+        from paise2.workers.context import initialize_worker_context
+
+        initialize_worker_context()
+
+    # Register worker context cleanup hook
+    @huey.on_shutdown()  # type: ignore[misc]
+    def shutdown_worker_context() -> None:
+        """Clean up worker context when worker process shuts down."""
+        from paise2.workers.context import cleanup_worker_context
+
+        cleanup_worker_context()
+
+    def singletons() -> Singletons:
+        """Get appropriate singletons based on execution mode.
+
+        Returns:
+            app_singletons in immediate mode (testing),
+            worker_singletons in worker mode (production)
+        """
+        if huey.immediate:
+            return app_singletons
+        return get_worker_singletons()
+
     @huey.task()  # type: ignore[misc]
     def fetch_content_task(
         url: str,
     ) -> dict[str, Any]:
-        return _do_fetch_content_task(singletons, url)
+        return _do_fetch_content_task(singletons(), url)
 
     @huey.task()  # type: ignore[misc]
     def extract_content_task(content: Content, metadata: Metadata) -> dict[str, Any]:
-        return _do_extract_content_task(singletons, content, metadata)
+        return _do_extract_content_task(singletons(), content, metadata)
 
     @huey.task()  # type: ignore[misc]
     def store_content_task(content: Content, metadata: Metadata) -> dict[str, Any]:
-        return _do_store_content_task(singletons, content, metadata)
+        return _do_store_content_task(singletons(), content, metadata)
 
     @huey.task()  # type: ignore[misc]
     def cleanup_cache_task(cache_ids: list[str]) -> dict[str, Any]:
-        return _do_cleanup_cache_task(singletons, cache_ids)
+        return _do_cleanup_cache_task(singletons(), cache_ids)
 
     return {
         "fetch_content": fetch_content_task,
@@ -160,7 +189,7 @@ def _run_fetcher_async(
 
 
 def _do_extract_content_task(
-    singletons: Singletons, content: bytes | str, metadata: Metadata
+    singletons: Singletons, content: Content, metadata: Metadata
 ) -> dict[str, Any]:
     """Extract content using appropriate ContentExtractor plugin."""
     try:

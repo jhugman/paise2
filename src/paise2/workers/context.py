@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
-import os
 import threading
 from typing import TYPE_CHECKING, Any
 
+from paise2.profiles.factory import create_plugin_manager_from_env
+
 if TYPE_CHECKING:
+    from paise2.main import Application
     from paise2.plugins.core.startup import Singletons
 
 __all__ = [
@@ -25,13 +27,14 @@ class WorkerContext:
     in each worker process to ensure complete isolation.
     """
 
-    def __init__(self, singletons: Singletons) -> None:
+    def __init__(self, singletons: Singletons, app: Application | None = None) -> None:
         """Initialize worker context with application singletons.
 
         Args:
             singletons: Complete application singletons container
         """
         self.singletons = singletons
+        self.app = app
         self.worker_id = threading.current_thread().ident
 
 
@@ -87,27 +90,24 @@ def initialize_worker_context() -> None:
         RuntimeError: If worker context initialization fails
     """
     try:
-        # Get profile from environment variable
-        profile = os.getenv("PAISE2_PROFILE", "development")
-
         # Import here to avoid circular dependencies
         from paise2.main import Application
 
         # Create and start complete application context
-        app = Application(profile=profile)
+        plugin_manager = create_plugin_manager_from_env()
+        app = Application(plugin_manager=plugin_manager)
         app.start()
 
         # Get the complete singletons container
         singletons = app.get_singletons()
 
         # Create worker context and store in thread-local storage
-        worker_context = WorkerContext(singletons)
+        worker_context = WorkerContext(singletons, app)
         _thread_context_manager.set_context(worker_context)
 
         # Log successful initialization
         singletons.logger.info(
-            "Worker context initialized for profile: %s, worker ID: %s",
-            profile,
+            "Worker context initialized: worker ID: %s",
             worker_context.worker_id,
         )
 
@@ -143,6 +143,8 @@ def cleanup_worker_context() -> None:
             # in a way that's accessible from the singletons. This is a
             # placeholder for future enhancement.
             # In a full implementation, we'd want to call app.stop()
+            if worker_context.app is not None:
+                worker_context.app.stop()
 
             # Clear the thread-local context
             _thread_context_manager.clear_context()
