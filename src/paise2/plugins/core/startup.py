@@ -117,6 +117,11 @@ class LifecycleHostImpl:
         """State manager for plugin use."""
         return SimpleStateManagerWrapper(self._singletons.state_storage)
 
+    @property
+    def singletons(self) -> Singletons:
+        """Access to system singletons for advanced lifecycle management."""
+        return self._singletons
+
     def schedule_fetch(self, url: str) -> None:
         """Schedule content to be fetched."""
         # For now, we'll implement this as a placeholder

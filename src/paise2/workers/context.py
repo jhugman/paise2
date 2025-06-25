@@ -95,6 +95,8 @@ def initialize_worker_context() -> None:
 
         # Create and start complete application context
         plugin_manager = create_plugin_manager_from_env()
+        plugin_manager.discover_internal_profile_plugins("worker")
+
         app = Application(plugin_manager=plugin_manager)
         app.start()
 

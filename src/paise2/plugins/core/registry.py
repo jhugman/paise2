@@ -135,6 +135,10 @@ class PluginManager:
         self._discover_external_plugins()
         return discovered
 
+    def discover_internal_profile_plugins(self, profile: str) -> list[str]:
+        profile_dir = Path(paise2.__file__).parent / "profiles" / profile
+        return self.discover_internal_plugins(profile_dir)
+
     def discover_internal_plugins(self, profile_dir: Path | None = None) -> list[str]:
         """Discover internal plugins by scanning the paise2 package."""
         return self._discover_internal_plugins(profile_dir or self._profile)

@@ -30,7 +30,10 @@ def _create_run_command() -> Any:
         from paise2.main import Application
 
         # Create and start application with the plugin manager
-        app = Application(plugin_manager=get_plugin_manager())
+        plugin_manager = get_plugin_manager()
+        plugin_manager.discover_internal_profile_plugins("app")
+
+        app = Application(plugin_manager=plugin_manager)
 
         # Set up signal handlers for graceful shutdown
         def signal_handler(signum: int, frame: Any) -> NoReturn:  # noqa: ARG001

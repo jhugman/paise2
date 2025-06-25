@@ -456,6 +456,10 @@ class TestHostInterfaces:
             def state(self) -> StateManager:
                 return TestStateManager()
 
+            @property
+            def singletons(self) -> Any:
+                return None
+
             def schedule_fetch(self, url: str) -> None:
                 pass
 
@@ -537,6 +541,10 @@ class TestProtocolInheritance:
             @property
             def state(self) -> StateManager:
                 return TestStateManager()
+
+            @property
+            def singletons(self) -> Any:
+                return None
 
             def schedule_fetch(self, url: str) -> None:
                 pass

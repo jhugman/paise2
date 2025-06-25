@@ -582,6 +582,11 @@ class MockLifecycleHost(MockBaseHost):
         super().__init__()
         self.lifecycle_events: list[str] = []
 
+    @property
+    def singletons(self) -> Any:
+        """Mock singletons property."""
+        return None
+
     def log_lifecycle_event(self, event: str) -> None:
         """Log a lifecycle event."""
         self.lifecycle_events.append(event)

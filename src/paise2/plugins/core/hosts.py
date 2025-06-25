@@ -280,19 +280,6 @@ class DataStorageHost(BaseHost):
         super().__init__(logger, configuration, state_storage, plugin_module_name)
 
 
-class LifecycleHost(BaseHost):
-    """Specialized host for lifecycle actions with basic host functionality."""
-
-    def __init__(
-        self,
-        logger: Logger,
-        configuration: Configuration,
-        state_storage: StateStorage,
-        plugin_module_name: str,
-    ):
-        super().__init__(logger, configuration, state_storage, plugin_module_name)
-
-
 # Hosts with job queue integration
 class BaseHostWithTaskQueue(BaseHost):
     """BaseHost with task queue integration for scheduling operations."""
@@ -406,6 +393,24 @@ def create_content_source_host(  # noqa: PLR0913
     )
 
 
+def create_content_source_host_from_singletons(
+    singletons: Singletons,
+    plugin_module_name: str,
+) -> ContentSourceHost:
+    """Create a ContentSourceHost instance from singletons."""
+    task_queue = singletons.task_queue
+    assert task_queue is not None
+    return create_content_source_host(
+        logger=singletons.logger,
+        configuration=singletons.configuration,
+        state_storage=singletons.state_storage,
+        plugin_module_name=plugin_module_name,
+        cache=singletons.cache,
+        data_storage=singletons.data_storage,
+        task_queue=task_queue,
+    )
+
+
 def create_content_fetcher_host_from_singletons(
     singletons: Singletons,
     plugin_module_name: str,
@@ -457,13 +462,3 @@ def create_data_storage_host(
 ) -> DataStorageHost:
     """Create a DataStorageHost instance."""
     return DataStorageHost(logger, configuration, state_storage, plugin_module_name)
-
-
-def create_lifecycle_host(
-    logger: Logger,
-    configuration: Configuration,
-    state_storage: StateStorage,
-    plugin_module_name: str,
-) -> LifecycleHost:
-    """Create a LifecycleHost instance."""
-    return LifecycleHost(logger, configuration, state_storage, plugin_module_name)

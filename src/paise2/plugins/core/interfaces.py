@@ -906,8 +906,23 @@ class LifecycleHost(BaseHost, Protocol):
     """
     Host interface for lifecycle actions.
 
-    Provides lifecycle actions with basic host functionality.
+    Provides lifecycle actions with basic host functionality
+    and access to system singletons for advanced lifecycle management.
     """
+
+    @property
+    def singletons(self) -> Any:
+        """
+        Access to system singletons for advanced lifecycle actions.
+
+        This provides access to the internal singletons container
+        for lifecycle actions that need to coordinate system-wide
+        operations. Should be cast to the appropriate type as needed.
+
+        Returns:
+            Singletons container as Any (cast as needed)
+        """
+        ...
 
 
 class Logger(Protocol):

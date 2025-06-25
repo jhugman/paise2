@@ -3,9 +3,7 @@
 # different profiles
 
 import os
-from pathlib import Path
 
-import paise2
 from paise2.plugins.core.registry import PluginManager
 
 
@@ -17,21 +15,12 @@ def create_plugin_manager(profile: str) -> PluginManager:
     raise ValueError(error_msg)
 
 
-def _profile(profile: str) -> Path:
-    return Path(paise2.__file__).parent / "profiles" / profile
-
-
-def _base_profile() -> Path:
-    return _profile("base")
-
-
 def _create_plugin_manager(profile: str) -> PluginManager:
-    root = _profile(profile)
     plugin_manager = PluginManager()
     # Discover base plugins first (core functionality)
-    plugin_manager.discover_internal_plugins(_base_profile())
+    plugin_manager.discover_internal_profile_plugins("base")
     # Then discover profile-specific plugins (profile customizations)
-    plugin_manager.discover_internal_plugins(root)
+    plugin_manager.discover_internal_profile_plugins(profile)
     return plugin_manager
 
 

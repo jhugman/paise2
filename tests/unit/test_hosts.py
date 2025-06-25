@@ -14,7 +14,6 @@ from paise2.plugins.core.interfaces import (
     ContentSourceHost,
     DataStorage,
     DataStorageHost,
-    LifecycleHost,
     StateManager,
     StateStorage,
 )
@@ -436,22 +435,6 @@ class TestSpecializedHosts:
         assert host.logger is self.mock_logger
         assert host.configuration is self.mock_configuration
 
-    def test_lifecycle_host_creation(self) -> None:
-        """Test LifecycleHost creation with basic host functionality."""
-        from paise2.plugins.core.hosts import LifecycleHost as ConcreteLifecycleHost
-
-        host = ConcreteLifecycleHost(
-            logger=self.mock_logger,
-            configuration=self.mock_configuration,
-            state_storage=self.mock_state_storage,
-            plugin_module_name=self.plugin_module_name,
-        )
-
-        # Verify it implements the LifecycleHost protocol
-        assert isinstance(host, LifecycleHost)
-        assert host.logger is self.mock_logger
-        assert host.configuration is self.mock_configuration
-
 
 class TestHostFactoriesSpecialized:
     """Test specialized host factory functions."""
@@ -529,19 +512,6 @@ class TestHostFactoriesSpecialized:
         )
 
         assert isinstance(host, DataStorageHost)
-
-    def test_create_lifecycle_host_factory(self) -> None:
-        """Test LifecycleHost creation through factory function."""
-        from paise2.plugins.core.hosts import create_lifecycle_host
-
-        host = create_lifecycle_host(
-            logger=self.mock_logger,
-            configuration=self.mock_configuration,
-            state_storage=self.mock_state_storage,
-            plugin_module_name=self.plugin_module_name,
-        )
-
-        assert isinstance(host, LifecycleHost)
 
 
 class TestJobSchedulingIntegration:
