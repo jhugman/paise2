@@ -13,6 +13,8 @@ def register_plugin(register: Callable[[Any], None]) -> None:
     """Register the SQLite worker plugin."""
     register(
         SqliteWorkerPlugin(
-            config_file="task_queue.yaml", plugin_module=sys.modules[__name__]
+            tq_config_file="task_queue.yaml",
+            worker_config_file="worker.yaml",
+            plugin_module=sys.modules[__name__],
         )
     )

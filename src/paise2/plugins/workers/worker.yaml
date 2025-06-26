@@ -1,0 +1,2 @@
+worker:
+  concurrency: 4

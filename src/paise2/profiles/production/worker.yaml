@@ -1,0 +1,3 @@
+# Producttion profile
+worker:
+  concurrency: 4

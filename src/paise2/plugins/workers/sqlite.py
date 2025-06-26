@@ -13,10 +13,12 @@ from paise2.plugins.providers.task_queue import HueySQLiteTaskQueueProvider
 class SqliteWorkerPlugin:
     def __init__(
         self,
-        config_file: str = "sqlite.yaml",
+        tq_config_file: str = "sqlite.yaml",
+        worker_config_file: str = "worker.yaml",
         plugin_module: ModuleType = sys.modules[__name__],
     ):
-        self._config_file = config_file
+        self._tq_config_file = tq_config_file
+        self._worker_config_file = worker_config_file
         self._plugin_module = plugin_module
 
     @hookimpl
@@ -35,7 +37,16 @@ class SqliteWorkerPlugin:
         """Register the task queue configuration provider."""
         register(
             FileConfigurationProvider(
-                self._config_file, plugin_module=self._plugin_module
+                self._tq_config_file,
+                plugin_module=self._plugin_module,
+                config_id="task_queue",
+            )
+        )
+        register(
+            FileConfigurationProvider(
+                self._worker_config_file,
+                plugin_module=self._plugin_module,
+                config_id="worker",
             )
         )
 
