@@ -465,18 +465,40 @@ class StartupManager:
         return data_storage
 
     def _create_logger_singleton(self, configuration: Configuration) -> Any:
-        """Create the logger singleton."""
+        """Create the logger singleton based on configuration."""
         self.bootstrap_logger.info("Creating logger singleton")
 
-        # For now, return a simple logger
-        # Real logger creation based on configuration will be implemented later
-        # Configuration will be used to set log level, format, handlers, etc.
-        from paise2.utils.logging import SimpleInMemoryLogger
+        # Check if test mode should use SimpleInMemoryLogger
+        use_simple_logger = configuration.get("test.enabled", False)
 
-        # Placeholder: configuration will control logger creation
-        _ = configuration  # Will be used in real implementation
-        logger = SimpleInMemoryLogger()
-        self.bootstrap_logger.info("Logger singleton created")
+        if use_simple_logger:
+            # Use SimpleInMemoryLogger for tests
+            from paise2.utils.logging import SimpleInMemoryLogger
+
+            logger: Any = SimpleInMemoryLogger()
+            self.bootstrap_logger.info(
+                "Logger singleton created (SimpleInMemoryLogger)"
+            )
+        else:
+            # Get logging configuration from the merged configuration
+            log_level = configuration.get("logging.level", "INFO")
+            log_format = configuration.get(
+                "logging.format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
+            log_name = configuration.get("logging.name", "paise2")
+
+            # Import the logger wrapper
+            from paise2.utils.logging import StandardLoggerWrapper
+
+            # Create and configure the logger wrapper
+            logger = StandardLoggerWrapper(
+                name=str(log_name), level=str(log_level), format_str=str(log_format)
+            )
+
+            self.bootstrap_logger.info(
+                "Logger singleton created with level: %s", str(log_level)
+            )
+
         return logger
 
     def _replay_bootstrap_logs(self, logger: Any) -> None:

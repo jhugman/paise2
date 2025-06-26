@@ -88,3 +88,61 @@ def replay_logs(logger: logging.Logger, logs: list[tuple[datetime, str, str]]) -
     for timestamp, level, message in logs:
         log_func = getattr(logger, level.lower(), logger.info)
         log_func(f"[Bootstrap {timestamp}] {message}")
+
+
+class StandardLoggerWrapper:
+    """Wrapper around Python's standard logging that implements Logger protocol.
+
+    This logger configures itself based on provided parameters and provides
+    a consistent interface for the PAISE2 system.
+    """
+
+    def __init__(
+        self, name: str = "paise2", level: str = "INFO", format_str: str | None = None
+    ):
+        self._logger = logging.getLogger(name)
+
+        # Set up the logger level
+        self._logger.setLevel(getattr(logging, level.upper()))
+
+        # Clear any existing handlers to avoid duplicates
+        self._logger.handlers.clear()
+
+        # Prevent propagation to parent loggers to avoid duplicate messages
+        self._logger.propagate = False
+
+        # Create console handler
+        handler = logging.StreamHandler()
+        handler.setLevel(getattr(logging, level.upper()))  # Set format
+        if format_str is None:
+            format_str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+        # Handle simple format strings by mapping them to proper logging formats
+        if format_str.lower() == "simple":
+            format_str = "%(levelname)s: %(message)s"
+
+        formatter = logging.Formatter(format_str, datefmt="%Y-%m-%d %H:%M:%S")
+        handler.setFormatter(formatter)
+
+        # Add handler to logger
+        self._logger.addHandler(handler)
+
+    def debug(self, message: str, *args: LogFormattableValue) -> None:
+        """Log a debug message."""
+        self._logger.debug(message, *args)
+
+    def info(self, message: str, *args: LogFormattableValue) -> None:
+        """Log an info message."""
+        self._logger.info(message, *args)
+
+    def warning(self, message: str, *args: LogFormattableValue) -> None:
+        """Log a warning message."""
+        self._logger.warning(message, *args)
+
+    def error(self, message: str, *args: LogFormattableValue) -> None:
+        """Log an error message."""
+        self._logger.error(message, *args)
+
+    def exception(self, message: str, *args: LogFormattableValue) -> None:
+        """Log an exception with traceback."""
+        self._logger.exception(message, *args)

@@ -1,0 +1,10 @@
+# Production logging configuration
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  name: paise2
+
+# Production-specific settings
+app:
+  debug: false
+  verbose: false
