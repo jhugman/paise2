@@ -31,7 +31,6 @@ def _create_run_command() -> Any:
 
         # Create and start application with the plugin manager
         plugin_manager = get_plugin_manager()
-        plugin_manager.discover_internal_profile_plugins("app")
 
         app = Application(plugin_manager=plugin_manager)
 

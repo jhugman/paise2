@@ -66,8 +66,8 @@ class TestProfileBasedPluginLoading:
         """Test custom paise2_root parameter with arbitrary directory."""
         # Create temporary directory structure with plugins
         with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            plugin_dir = temp_path / "custom_plugins"
+            profiles_dir = Path(temp_dir)
+            plugin_dir = profiles_dir / "custom_plugins"
             plugin_dir.mkdir()
 
             # Create a simple plugin file
@@ -86,18 +86,16 @@ def register_state_storage_provider(
 """)
 
             # Create plugin manager with custom root
-            plugin_manager = PluginManager(profile=str(plugin_dir))
+            plugin_manager = PluginManager(profiles_dir=profiles_dir)
 
             # This should discover the custom plugin
-            discovered = plugin_manager.discover_plugins()
+            discovered = plugin_manager.discover_internal_profile_plugins(
+                "custom_plugins"
+            )
 
             # Should have found our custom plugin
             # May be 0 if module loading fails due to import issues
             assert len(discovered) >= 0
-
-            # The directory structure should be scanned
-            # Note: accessing private member for testing purposes
-            assert plugin_manager._profile == plugin_dir  # noqa: SLF001
 
     def test_profile_directory_structure(self) -> None:
         """Test that profile directories exist and have expected structure."""
@@ -118,11 +116,8 @@ def register_state_storage_provider(
         # Default constructor should still work
         plugin_manager = PluginManager()
 
-        # Note: accessing private member for testing purposes
-        assert plugin_manager._profile is None  # noqa: SLF001
-
         # Should be able to discover plugins
-        discovered = plugin_manager.discover_plugins()
+        discovered = plugin_manager.discover_internal_profile_plugins("app")
         assert isinstance(discovered, list)
 
 

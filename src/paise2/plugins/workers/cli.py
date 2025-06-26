@@ -147,55 +147,55 @@ def _execute_start_command(concurrency: int | None, daemonize: bool) -> None:
     try:
         # Create application with plugin manager
         app = Application(plugin_manager=get_plugin_manager())
+        app.start_for_worker()
 
-        with app:
-            singletons = app.get_singletons()
+        singletons = app.get_singletons()
 
-            # Get the Huey instance from task queue
-            if not hasattr(singletons, "task_queue") or singletons.task_queue is None:
-                click.echo("Error: Task queue not available", err=True)
-                sys.exit(1)
+        # Get the Huey instance from task queue
+        if not hasattr(singletons, "task_queue") or singletons.task_queue is None:
+            click.echo("Error: Task queue not available", err=True)
+            sys.exit(1)
 
-            huey = singletons.task_queue.huey
+        huey = singletons.task_queue.huey
 
-            # Get concurrency from configuration if not specified
-            if concurrency is None:
-                config_value = singletons.configuration.get("worker.concurrency", 4)
-                if isinstance(config_value, (int, str)):
-                    concurrency = int(config_value)
+        # Get concurrency from configuration if not specified
+        if concurrency is None:
+            config_value = singletons.configuration.get("worker.concurrency", 4)
+            if isinstance(config_value, (int, str)):
+                concurrency = int(config_value)
+            else:
+                concurrency = 4
+
+        click.echo(f"Starting {concurrency} worker(s)...")
+
+        # Set profile environment variable for worker processes
+        os.environ["PAISE2_PROFILE"] = profile
+
+        # Create and configure consumer
+        consumer: Any = huey.create_consumer(workers=concurrency)
+
+        # Set up signal handlers for graceful shutdown
+        def signal_handler(signum: int, frame: Any) -> NoReturn:  # noqa: ARG001
+            logger.info("Received signal %d, shutting down workers...", signum)
+            click.echo("\nShutting down workers gracefully...")
+            try:
+                if hasattr(consumer, "shutdown"):
+                    consumer.shutdown()
                 else:
-                    concurrency = 4
+                    # Fallback for consumers without shutdown method
+                    consumer.stop()
+                click.echo("Workers stopped.")
+            except Exception:
+                logger.exception("Error during worker shutdown")
+            sys.exit(0)
 
-            click.echo(f"Starting {concurrency} worker(s)...")
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
 
-            # Set profile environment variable for worker processes
-            os.environ["PAISE2_PROFILE"] = profile
+        click.echo("Workers started successfully. Press Ctrl+C to stop.")
 
-            # Create and configure consumer
-            consumer: Any = huey.create_consumer(workers=concurrency)
-
-            # Set up signal handlers for graceful shutdown
-            def signal_handler(signum: int, frame: Any) -> NoReturn:  # noqa: ARG001
-                logger.info("Received signal %d, shutting down workers...", signum)
-                click.echo("\nShutting down workers gracefully...")
-                try:
-                    if hasattr(consumer, "shutdown"):
-                        consumer.shutdown()
-                    else:
-                        # Fallback for consumers without shutdown method
-                        consumer.stop()
-                    click.echo("Workers stopped.")
-                except Exception:
-                    logger.exception("Error during worker shutdown")
-                sys.exit(0)
-
-            signal.signal(signal.SIGINT, signal_handler)
-            signal.signal(signal.SIGTERM, signal_handler)
-
-            click.echo("Workers started successfully. Press Ctrl+C to stop.")
-
-            # Run the consumer (this blocks until interrupted)
-            consumer.run()
+        # Run the consumer (this blocks until interrupted)
+        consumer.run()
 
     except Exception as e:
         logger.exception("Error starting workers")
@@ -215,19 +215,19 @@ def _execute_status_command(output_format: str) -> None:
     try:
         # Create application with plugin manager
         app = Application(plugin_manager=get_plugin_manager())
+        app.start_for_worker()
 
-        with app:
-            singletons = app.get_singletons()
+        singletons = app.get_singletons()
 
-            # Get worker status information
-            worker_status = _get_worker_status(singletons)
+        # Get worker status information
+        worker_status = _get_worker_status(singletons)
 
-            if output_format == "json":
-                import json
+        if output_format == "json":
+            import json
 
-                click.echo(json.dumps(worker_status, indent=2))
-            else:
-                _display_worker_status_rich(worker_status)
+            click.echo(json.dumps(worker_status, indent=2))
+        else:
+            _display_worker_status_rich(worker_status)
 
     except Exception as e:
         logger.exception("Error getting worker status")

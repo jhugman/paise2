@@ -100,7 +100,7 @@ class TestStateStorageProviderDiscovery:
         from paise2.profiles.factory import create_test_plugin_manager
 
         test_manager = create_test_plugin_manager()
-        discovered = test_manager.discover_plugins()
+        discovered = test_manager.discover_internal_profile_plugins("app")
 
         # Should find plugins in test profile
         assert isinstance(discovered, list)

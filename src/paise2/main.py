@@ -60,6 +60,25 @@ class Application:
         self._plugin_system.start(user_config_dict=self._user_config)
         self._is_running = True
 
+    def start_for_worker(self) -> None:
+        """Start the application in worker mode with only singleton initialization.
+
+        This method initializes the application up to phase 3 (singleton creation)
+        without starting content sources or lifecycle actions. This is intended
+        for worker processes that only need access to system services.
+        """
+        if self._is_running:
+            return
+
+        # Import here to avoid circular dependencies
+        from paise2.plugins.core.manager import PluginSystem
+
+        # Create and start plugin system in worker mode
+        self._plugin_system = PluginSystem(self._plugin_manager)
+        self._plugin_system.bootstrap()
+        self._plugin_system.start_to_singletons(user_config_dict=self._user_config)
+        self._is_running = True
+
     def stop(self) -> None:
         """Stop the application with graceful shutdown."""
         if not self._is_running:

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import ast
 import importlib
 import inspect
 import logging
@@ -104,21 +103,13 @@ class PluginHooks:
 class PluginManager:
     """Plugin manager that provides registration and discovery using pluggy."""
 
-    def __init__(self, profile: str | None = None) -> None:
-        """
-        Initialize the plugin manager with pluggy integration.
-
-        Args:
-            paise2_root: Root path for plugin discovery. If None, uses paise2.__file__.
-                        Can be set to discover plugins from different profiles/contexts.
-        """
+    def __init__(self, profiles_dir: Path | None = None) -> None:
+        """Initialize the plugin manager."""
+        self._profiles_dir = profiles_dir or Path(paise2.__file__).parent / "profiles"
         self.pm = pluggy.PluginManager("paise2")
         self.pm.add_hookspecs(PluginHooks)
 
-        # Set plugin discovery root (for profile-based plugin loading)
-        self._profile = Path(profile) if profile else None
-
-        # Plugin storage
+        # Storage for discovered plugin providers
         self._configuration_providers: list[ConfigurationProvider] = []
         self._content_extractors: list[ContentExtractor] = []
         self._content_sources: list[ContentSource] = []
@@ -126,72 +117,63 @@ class PluginManager:
         self._lifecycle_actions: list[LifecycleAction] = []
         self._data_storage_providers: list[DataStorageProvider] = []
         self._task_queue_providers: list[TaskQueueProvider] = []
-        self._state_storage_providers: list[StateStorageProvider] = []
+        self._state_providers: list[StateStorageProvider] = []
         self._cache_providers: list[CacheProvider] = []
 
-    def discover_plugins(self) -> list[str]:
-        """Discover and load both internal and external plugins."""
-        discovered = self._discover_internal_plugins(self._profile)
+        # Track registered plugins to prevent duplicate registration
+        self._registered_plugins: set[Any] = set()
+        self._registered_providers: set[Any] = set()
+
+        # Track whether plugins have been loaded to prevent duplicate loading
+        self._plugins_loaded: bool = False
+
+    def discover_plugins(self) -> None:
+        """Discover and load internal and external plugins from specified directory."""
         self._discover_external_plugins()
-        return discovered
 
     def discover_internal_profile_plugins(self, profile: str) -> list[str]:
-        profile_dir = Path(paise2.__file__).parent / "profiles" / profile
+        profile_dir = self._profiles_dir / profile
         return self.discover_internal_plugins(profile_dir)
 
-    def discover_internal_plugins(self, profile_dir: Path | None = None) -> list[str]:
-        """Discover internal plugins by scanning the paise2 package."""
-        return self._discover_internal_plugins(profile_dir or self._profile)
+    def discover_internal_plugins(self, profile_dir: Path) -> list[str]:
+        """Discover internal plugins by scanning the specified directory."""
+        return self._discover_internal_plugins(profile_dir)
 
     def discover_external_plugins(self) -> None:
         """Discover external plugins via setuptools entry points."""
         return self._discover_external_plugins()
 
-    def _discover_internal_plugins(self, profile_dir: Path | None) -> list[str]:
-        """Discover internal plugins by scanning the paise2 package."""
+    def _discover_internal_plugins(self, profile_dir: Path) -> list[str]:
+        """Discover internal plugins by importing all modules in profile directory."""
         discovered_modules: list[str] = []
-        if profile_dir is None:
-            return discovered_modules
 
         try:
-            # Use the configured paise2 root for plugin discovery
             logger.debug("Scanning paise2 package at: %s", profile_dir)
 
-            # Scan all Python files in the paise2 package
+            # Import all Python files in the profile directory
             for py_file in profile_dir.rglob("*.py"):
                 if py_file.name.startswith("__"):
                     continue
 
                 try:
-                    # Convert file path to module name
-                    # For profile-based loading, calculate module name relative to
-                    # the main paise2 package
-                    paise2_package_root = Path(paise2.__file__).parent.parent
-                    rel_path = py_file.relative_to(paise2_package_root)
-                    module_name = str(rel_path.with_suffix("")).replace("/", ".")
+                    module_name = self._file_path_to_module_name(py_file)
 
-                    # Check if file contains @hookimpl decorators
-                    if self._has_hookimpl_decorators(py_file):
-                        logger.debug("Found plugin module: %s", module_name)
-                        discovered_modules.append(module_name)
+                    # Import and register the module
+                    module = importlib.import_module(module_name)
+                    self.pm.register(module)
 
-                        # Load and register the module
-                        try:
-                            self._load_plugin_module(module_name)
-                        except Exception:
-                            logger.exception(
-                                "Failed to load plugin module %s", module_name
-                            )
+                    discovered_modules.append(module_name)
+                    logger.debug("Loaded plugin module: %s", module_name)
 
                 except Exception:
-                    logger.warning("Error scanning file %s", py_file)
+                    logger.warning("Error loading module from %s", py_file)
                     continue
 
         except Exception:
             logger.exception("Error during internal plugin discovery")
 
         logger.info(
-            "Internal plugin discovery complete. Found %d modules",
+            "Internal plugin discovery complete. Loaded %d modules",
             len(discovered_modules),
         )
         return discovered_modules
@@ -205,56 +187,22 @@ class PluginManager:
         except Exception:
             logger.exception("Error during external plugin discovery")
 
-    def _has_hookimpl_decorators(self, file_path: Path) -> bool:
-        """Check if a Python file contains @hookimpl decorators."""
-        try:
-            with file_path.open(encoding="utf-8") as f:
-                content = f.read()
-
-            # Quick string check first
-            if "@hookimpl" not in content and "hookimpl" not in content:
-                return False
-
-            # Parse the AST to look for decorator usage
-            try:
-                tree = ast.parse(content)
-                for node in ast.walk(tree):
-                    if isinstance(node, ast.FunctionDef) and node.decorator_list:
-                        for decorator in node.decorator_list:
-                            # Check for @hookimpl decorator
-                            if (
-                                isinstance(decorator, ast.Name)
-                                and decorator.id == "hookimpl"
-                            ) or (
-                                isinstance(decorator, ast.Attribute)
-                                and decorator.attr == "hookimpl"
-                            ):
-                                return True
-            except SyntaxError:
-                # If we can't parse the file, skip it
-                pass
-
-        except Exception:
-            logger.debug("Could not parse %s", file_path)
-
-        return False
-
-    def _load_plugin_module(self, module_name: str) -> None:
-        """Load a plugin module and register it with pluggy."""
-        try:
-            module = importlib.import_module(module_name)
-            self.pm.register(module)
-            logger.debug("Successfully loaded plugin module: %s", module_name)
-        except Exception:
-            logger.exception("Failed to load plugin module %s", module_name)
-            raise
-
     def load_plugins(self) -> None:
-        """Load all discovered plugins and call their registration hooks."""
-        # Call plugin registration hook first
+        """Load discovered plugins and register plugin objects."""
+        # Prevent duplicate loading
+        if self._plugins_loaded:
+            logger.debug(
+                "Plugins already loaded, skipping duplicate load_plugins() call"
+            )
+            return
+
+        logger.debug("Loading all plugin types for the first time")
+        self._plugins_loaded = True
+
+        # Load plugin objects first (these might expose more hookimpl methods)
         self.pm.hook.register_plugin(register=self._register_plugin)
 
-        # Call registration hooks with callback functions
+        # Load all provider types
         self.pm.hook.register_configuration_provider(
             register=self._register_configuration_provider
         )
@@ -277,59 +225,145 @@ class PluginManager:
 
     def load_cli_commands(self, cli: click.Group) -> None:
         """Load CLI command extensions from plugins."""
+        # CLI commands must be loaded immediately, not lazily
         # Call the CLI registration hook directly with the CLI group
         self.pm.hook.register_commands(cli=cli)
 
     # Registration callback functions
     def _register_plugin(self, plugin: Any) -> None:
         """Register a plugin object and register it with the plugin manager."""
+        # Check if this plugin object has already been registered
+        if plugin in self._registered_plugins:
+            logger.info(
+                "Plugin already registered, skipping: %s (id: %s)",
+                type(plugin).__name__,
+                id(plugin),
+            )
+            return
+
         # Register the plugin object itself with pluggy
         self.pm.register(plugin)
+        self._registered_plugins.add(plugin)
+        logger.info(
+            "Registered new plugin: %s (id: %s)", type(plugin).__name__, id(plugin)
+        )
 
     def _register_configuration_provider(self, provider: ConfigurationProvider) -> None:
         """Register a configuration provider."""
         if self._validate_and_log(provider, ConfigurationProvider):
-            self._configuration_providers.append(provider)
+            # Check for duplicates by comparing provider instances
+            if provider not in self._registered_providers:
+                self._configuration_providers.append(provider)
+                self._registered_providers.add(provider)
+            else:
+                logger.debug(
+                    "Configuration provider already registered, skipping: %s",
+                    type(provider).__name__,
+                )
 
     def _register_content_extractor(self, extractor: ContentExtractor) -> None:
         """Register a content extractor."""
         if self._validate_and_log(extractor, ContentExtractor):
-            self._content_extractors.append(extractor)
+            # Check for duplicates by comparing provider instances
+            if extractor not in self._registered_providers:
+                self._content_extractors.append(extractor)
+                self._registered_providers.add(extractor)
+            else:
+                logger.debug(
+                    "Content extractor already registered, skipping: %s",
+                    type(extractor).__name__,
+                )
 
     def _register_content_source(self, source: ContentSource) -> None:
         """Register a content source."""
         if self._validate_and_log(source, ContentSource):
-            self._content_sources.append(source)
+            # Check for duplicates by comparing provider instances
+            if source not in self._registered_providers:
+                self._content_sources.append(source)
+                self._registered_providers.add(source)
+            else:
+                logger.debug(
+                    "Content source already registered, skipping: %s",
+                    type(source).__name__,
+                )
 
     def _register_content_fetcher(self, fetcher: ContentFetcher) -> None:
         """Register a content fetcher."""
         if self._validate_and_log(fetcher, ContentFetcher):
-            self._content_fetchers.append(fetcher)
+            # Check for duplicates by comparing provider instances
+            if fetcher not in self._registered_providers:
+                self._content_fetchers.append(fetcher)
+                self._registered_providers.add(fetcher)
+            else:
+                logger.debug(
+                    "Content fetcher already registered, skipping: %s",
+                    type(fetcher).__name__,
+                )
 
     def _register_lifecycle_action(self, action: LifecycleAction) -> None:
         """Register a lifecycle action."""
         if self._validate_and_log(action, LifecycleAction):
-            self._lifecycle_actions.append(action)
+            # Check for duplicates by comparing provider instances
+            if action not in self._registered_providers:
+                self._lifecycle_actions.append(action)
+                self._registered_providers.add(action)
+            else:
+                logger.debug(
+                    "Lifecycle action already registered, skipping: %s",
+                    type(action).__name__,
+                )
 
     def _register_data_storage_provider(self, provider: DataStorageProvider) -> None:
         """Register a data storage provider."""
         if self._validate_and_log(provider, DataStorageProvider):
-            self._data_storage_providers.append(provider)
+            # Check for duplicates by comparing provider instances
+            if provider not in self._registered_providers:
+                self._data_storage_providers.append(provider)
+                self._registered_providers.add(provider)
+            else:
+                logger.debug(
+                    "Data storage provider already registered, skipping: %s",
+                    type(provider).__name__,
+                )
 
     def _register_task_queue_provider(self, provider: TaskQueueProvider) -> None:
         """Register a task queue provider."""
         if self._validate_and_log(provider, TaskQueueProvider):
-            self._task_queue_providers.append(provider)
+            # Check for duplicates by comparing provider instances
+            if provider not in self._registered_providers:
+                self._task_queue_providers.append(provider)
+                self._registered_providers.add(provider)
+            else:
+                logger.debug(
+                    "Task queue provider already registered, skipping: %s",
+                    type(provider).__name__,
+                )
 
     def _register_state_storage_provider(self, provider: StateStorageProvider) -> None:
         """Register a state storage provider."""
         if self._validate_and_log(provider, StateStorageProvider):
-            self._state_storage_providers.append(provider)
+            # Check for duplicates by comparing provider instances
+            if provider not in self._registered_providers:
+                self._state_providers.append(provider)
+                self._registered_providers.add(provider)
+            else:
+                logger.debug(
+                    "State storage provider already registered, skipping: %s",
+                    type(provider).__name__,
+                )
 
     def _register_cache_provider(self, provider: CacheProvider) -> None:
         """Register a cache provider."""
         if self._validate_and_log(provider, CacheProvider):
-            self._cache_providers.append(provider)
+            # Check for duplicates by comparing provider instances
+            if provider not in self._registered_providers:
+                self._cache_providers.append(provider)
+                self._registered_providers.add(provider)
+            else:
+                logger.debug(
+                    "Cache provider already registered, skipping: %s",
+                    type(provider).__name__,
+                )
 
     # Public registration methods (for testing and direct use)
     def register_configuration_provider(self, provider: ConfigurationProvider) -> bool:
@@ -384,7 +418,7 @@ class PluginManager:
     def register_state_storage_provider(self, provider: StateStorageProvider) -> bool:
         """Register a state storage provider directly."""
         if self._validate_and_log(provider, StateStorageProvider):
-            self._state_storage_providers.append(provider)
+            self._state_providers.append(provider)
             return True
         return False
 
@@ -432,7 +466,7 @@ class PluginManager:
 
     def get_state_storage_providers(self) -> list[StateStorageProvider]:
         """Get all registered state storage providers."""
-        return self._state_storage_providers.copy()
+        return self._state_providers.copy()
 
     def get_cache_providers(self) -> list[CacheProvider]:
         """Get all registered cache providers."""
@@ -587,3 +621,17 @@ class PluginManager:
         """Check if an annotation represents a callable."""
         # This is a simplified check
         return "Callable" in str(annotation) or "function" in str(annotation).lower()
+
+    def _file_path_to_module_name(self, py_file: Path) -> str:
+        """Convert a Python file path to its corresponding module name.
+
+        Args:
+            py_file: Path to a Python file within the paise2 package
+
+        Returns:
+            Module name (e.g., "paise2.profiles.development.plugin")
+        """
+        paise2_package_path = Path(paise2.__file__).parent
+        rel_path = py_file.relative_to(paise2_package_path)
+        module_path = str(rel_path.with_suffix("")).replace("/", ".")
+        return f"paise2.{module_path}"

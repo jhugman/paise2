@@ -107,6 +107,41 @@ class PluginSystem:
             self._is_running = False
             raise
 
+    def start_to_singletons(
+        self, user_config_dict: dict[str, Any] | None = None
+    ) -> None:
+        """
+        Start the plugin system only up to singleton creation (phase 3).
+
+        This method runs only the first 3 phases of startup to create singletons
+        without starting content sources or lifecycle actions. This is used by
+        worker processes that only need access to system services.
+
+        Args:
+            user_config_dict: Optional user configuration overrides.
+
+        Raises:
+            RuntimeError: If bootstrap() has not been called first.
+        """
+        if self._startup_manager is None:
+            msg = "Must call bootstrap() before start_to_singletons()"
+            raise RuntimeError(msg)
+
+        if self._is_running:
+            return  # Already running
+
+        try:
+            # Run startup only to singleton creation (async)
+            self._singletons = asyncio.run(
+                self._startup_manager.execute_startup_to_singletons(user_config_dict)
+            )
+            self._is_running = True
+        except Exception:
+            # Ensure clean state on startup failure
+            self._singletons = None
+            self._is_running = False
+            raise
+
     def stop(self) -> None:
         """
         Stop the plugin system and perform cleanup.

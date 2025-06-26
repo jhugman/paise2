@@ -181,6 +181,45 @@ class StartupManager:
             self.bootstrap_logger.error(error_msg)  # noqa: TRY400
             raise StartupError(error_msg) from e
 
+    async def execute_startup_to_singletons(
+        self, user_config_dict: dict[str, Any] | None = None
+    ) -> Singletons:
+        """Execute startup only up to phase 3 (singleton creation) for worker mode.
+
+        This method runs only the first 3 phases of startup:
+        1. Bootstrap - minimal logging setup
+        2. Singleton contributing - load plugins that provide singletons
+        3. Singleton creation - create all singletons (config, storage, cache, etc.)
+
+        This is used by worker processes that only need access to singletons
+        without starting content sources or lifecycle actions.
+
+        Args:
+            user_config_dict: Optional user configuration overrides
+
+        Returns:
+            Singletons container with all system services
+
+        Raises:
+            StartupError: If any startup phase fails
+        """
+        try:
+            await self._phase_1_bootstrap()
+            await self._phase_2_singleton_contributing()
+            await self._phase_3_singleton_creation(user_config_dict)
+
+            if self.singletons is None:
+                raise StartupError(_SINGLETONS_NOT_CREATED)  # noqa: TRY301
+
+            return self.singletons  # noqa: TRY300
+
+        except Exception as e:
+            error_msg = (
+                f"Startup to singletons failed in phase {self.current_phase}: {e}"
+            )
+            self.bootstrap_logger.error(error_msg)  # noqa: TRY400
+            raise StartupError(error_msg) from e
+
     async def phase_1_bootstrap(self) -> None:
         """Phase 1: Bootstrap - Create minimal logger and plugin system."""
         return await self._phase_1_bootstrap()
@@ -216,8 +255,10 @@ class StartupManager:
         self.current_phase = StartupPhase.SINGLETON_CONTRIBUTING
         self.bootstrap_logger.info("Phase 2: Loading singleton-contributing extensions")
 
-        # Load plugins that contribute to singletons
+        # Discover external plugins via setuptools entry points
         self.plugin_manager.discover_plugins()
+
+        # Load plugins that contribute to singletons
         self.plugin_manager.load_plugins()
 
         # Validate that we have the required providers

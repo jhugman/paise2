@@ -67,6 +67,9 @@ def main() -> None:
         # Create plugin manager based on PAISE2_PROFILE environment variable
         # Factory handles discovery of both base and profile-specific plugins
         plugin_manager = create_plugin_manager_from_env()
+        # This loads plugins which are specific to the "app", but not the worker.
+        plugin_manager.discover_internal_profile_plugins("app")
+        plugin_manager.discover_plugins()
 
         # Set global plugin manager for CLI commands to use
         _set_plugin_manager(plugin_manager)

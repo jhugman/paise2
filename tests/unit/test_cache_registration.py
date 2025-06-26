@@ -97,17 +97,6 @@ class TestCacheProviderRegistration:
 class TestCacheProviderDiscovery:
     """Test cache provider plugin discovery."""
 
-    def test_profile_based_cache_providers_discoverable(self) -> None:
-        """Test that cache providers are discoverable via profile-based loading."""
-        # Test that profile-based plugins are discoverable
-        from paise2.profiles.factory import create_test_plugin_manager
-
-        test_manager = create_test_plugin_manager()
-        discovered = test_manager.discover_plugins()
-
-        # Should find plugins in test profile
-        assert isinstance(discovered, list)
-
     def test_cache_provider_creation_from_configuration(self) -> None:
         """Test that providers can create cache instances from configuration."""
         # Test memory provider (configuration independent)

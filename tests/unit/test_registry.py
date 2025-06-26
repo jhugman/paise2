@@ -7,9 +7,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
 
-import paise2
-import paise2.profiles
-import paise2.profiles.test
 from paise2.plugins.core.interfaces import (
     ContentExtractor,
     ContentExtractorHost,
@@ -68,7 +65,7 @@ class TestPluginDiscovery:
 
         # Test that internal plugin discovery works
         # This should scan the paise2 codebase for @hookimpl functions
-        internal_plugins = manager.discover_internal_plugins()
+        internal_plugins = manager.discover_internal_profile_plugins("foo")
 
         # Should return a list (even if empty initially)
         assert isinstance(internal_plugins, list)
@@ -95,7 +92,7 @@ class TestPluginDiscovery:
         with patch(
             "importlib.import_module", side_effect=ImportError("Mock import error")
         ):
-            plugins = manager.discover_internal_plugins()
+            plugins = manager.discover_internal_profile_plugins("app")
             # Should not raise, should return empty list or log error
             assert isinstance(plugins, list)
 
@@ -253,7 +250,7 @@ class TestPluginErrorHandling:
             mock_import.side_effect = [ImportError("Broken module"), Mock()]
 
             # Discovery should continue and not raise
-            plugins = manager.discover_internal_plugins()
+            plugins = manager.discover_internal_profile_plugins("test")
             assert isinstance(plugins, list)
 
     def test_plugin_loading_error_recovery(self) -> None:
@@ -345,11 +342,11 @@ class TestLogging:
         """Test that plugin discovery events are logged."""
         from paise2.plugins.core.registry import PluginManager
 
-        manager = PluginManager(profile=paise2.profiles.test.__file__)
+        manager = PluginManager()
 
         # Test that discovery logs information (we'll check logger was called)
         with patch("paise2.plugins.core.registry.logger") as mock_logger:
-            manager.discover_internal_plugins()
+            manager.discover_internal_profile_plugins("test")
 
             # Should have logged discovery information
             assert mock_logger.info.called or mock_logger.debug.called
