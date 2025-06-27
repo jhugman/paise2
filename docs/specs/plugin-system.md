@@ -126,6 +126,31 @@ class LifecycleAction(Protocol):
     async def shutdown(self, host: LifecycleActionHost) -> None: ...
 ```
 
+#### ResetAction
+Handles system reset operations with different levels of thoroughness.
+
+```python
+class ResetAction(Protocol):
+    def hard_reset(self, host: LifecycleHost, configuration: Configuration) -> None: ...
+    def soft_reset(self, host: LifecycleHost, configuration: Configuration) -> None: ...
+```
+
+**Registration**: Use the `register_reset_action` hookspec:
+```python
+@hookimpl
+def register_reset_action(register: Callable[[ResetAction], None]) -> None:
+    register(MyResetAction())
+```
+
+**Usage**: Reset actions are called by the `paise2 reset` CLI command:
+- `paise2 reset` - calls `soft_reset()` on all registered actions
+- `paise2 reset --hard` - calls `hard_reset()` on all registered actions
+
+**Implementation Guidelines**:
+- `soft_reset()` should clear temporary data while preserving important persistent information
+- `hard_reset()` should perform complete reset, clearing all data and returning to initial state
+- Reset actions should be idempotent and handle errors gracefully
+
 #### CLI Commands
 Contributes custom commands to the PAISE2 command-line interface.
 

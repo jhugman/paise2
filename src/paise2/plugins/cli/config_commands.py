@@ -4,6 +4,9 @@
 from __future__ import annotations
 
 import json
+import shutil
+from pathlib import Path
+from typing import TYPE_CHECKING, Callable
 
 import click
 import editor
@@ -13,7 +16,12 @@ from rich.syntax import Syntax
 
 from paise2.cli import get_plugin_manager
 from paise2.config.factory import ConfigurationFactory
+from paise2.constants import get_config_dir
+from paise2.plugins.core.interfaces import LifecycleHost, ResetAction
 from paise2.plugins.core.registry import PluginManager, hookimpl
+
+if TYPE_CHECKING:
+    from paise2.config.models import Configuration
 
 console = Console()
 
@@ -36,6 +44,24 @@ class ConfigCliPlugin:
         if self._plugin_manager is None:
             self._plugin_manager = get_plugin_manager()
         return self._plugin_manager
+
+    @hookimpl
+    def register_reset_action(self, register: Callable[[ResetAction], None]) -> None:
+        class ResetConfiguration(ResetAction):
+            def hard_reset(
+                self,
+                host: LifecycleHost,  # noqa: ARG002
+                configuration: Configuration,  # noqa: ARG002
+            ) -> None:
+                config_dir = Path(get_config_dir()).expanduser()
+                shutil.rmtree(config_dir, ignore_errors=True)
+
+            def soft_reset(
+                self, host: LifecycleHost, configuration: Configuration
+            ) -> None:
+                pass
+
+        register(ResetConfiguration())
 
     @hookimpl
     def register_commands(self, cli: click.Group) -> None:

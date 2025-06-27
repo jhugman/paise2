@@ -736,6 +736,42 @@ class LifecycleAction(Protocol):
         ...
 
 
+@runtime_checkable
+class ResetAction(Protocol):
+    """
+    Handles system reset operations.
+
+    ResetActions provide mechanisms to reset various system components
+    with different levels of thoroughness (soft vs hard reset).
+    """
+
+    def hard_reset(self, host: LifecycleHost, configuration: Configuration) -> None:
+        """
+        Perform a complete reset of the component.
+
+        This should perform a thorough reset, clearing all data
+        and returning the component to its initial state.
+
+        Args:
+            host: Host interface for system interaction
+            configuration: System configuration
+        """
+        ...
+
+    def soft_reset(self, host: LifecycleHost, configuration: Configuration) -> None:
+        """
+        Perform a partial reset of the component.
+
+        This should perform a lighter reset, clearing temporary
+        data while preserving important persistent information.
+
+        Args:
+            host: Host interface for system interaction
+            configuration: System configuration
+        """
+        ...
+
+
 # =============================================================================
 # Host Interfaces
 # =============================================================================

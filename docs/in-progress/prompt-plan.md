@@ -1,5 +1,45 @@
 # PAISE2 Worker System - Implementation Prompt Plan
 
+## Recently Completed: ResetAction Extension Point (✅ DONE)
+
+**Completed Implementation**: Added ResetAction extension point to PAISE2 plugin system.
+
+### What Was Built:
+- ✅ **ResetAction Protocol**: Added to `src/paise2/plugins/core/interfaces.py`
+  - `hard_reset(host, configuration)` - Complete system reset
+  - `soft_reset(host, configuration)` - Partial reset preserving important data
+- ✅ **Registration System**: Added `register_reset_action` hookspec to plugin registry
+- ✅ **CLI Commands**: Implemented `paise2 reset` and `paise2 reset --hard`
+  - `paise2 reset` - calls soft_reset on all registered ResetAction plugins
+  - `paise2 reset --hard` - calls hard_reset on all registered ResetAction plugins
+- ✅ **Plugin Integration**: ResetCliPlugin registered via `register_commands` extension point
+- ✅ **Documentation**:
+  - Added ResetAction to `docs/specs/plugin-system.md`
+  - Added reset command to `docs/specs/commandline.md`
+- ✅ **Tests**: Comprehensive unit tests for protocol, registration, and CLI logic
+- ✅ **All Tests Passing**: 515/515 tests pass
+
+### Example Usage:
+```python
+# Plugin implementation
+@hookimpl
+def register_reset_action(register: Callable[[ResetAction], None]) -> None:
+    register(MyResetAction())
+
+class MyResetAction:
+    def hard_reset(self, host: LifecycleHost, configuration: Configuration) -> None:
+        # Complete reset logic
+        pass
+
+    def soft_reset(self, host: LifecycleHost, configuration: Configuration) -> None:
+        # Partial reset logic
+        pass
+```
+
+**Status**: ✅ Complete and tested. Ready for production use.
+
+---
+
 ## Project Overview
 
 PAISE2 is a production-ready content indexing system with a comprehensive plugin architecture. The system includes:

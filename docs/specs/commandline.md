@@ -216,6 +216,44 @@ paise2 validate
 **Description:**
 Performs comprehensive validation of the system configuration and loaded plugins.
 
+### `paise2 reset [--hard]`
+
+Reset system components using registered ResetAction plugins.
+
+**Usage:**
+```bash
+paise2 reset
+paise2 reset --hard
+```
+
+**Description:**
+Calls all registered ResetAction plugins to reset various system components. The level of reset depends on the flag used:
+
+- **Soft reset** (default): Performs a partial reset, clearing temporary data while preserving important persistent information
+- **Hard reset** (`--hard`): Performs a complete reset, clearing all data and returning components to their initial state
+
+**Options:**
+- `--hard`: Perform a hard reset instead of the default soft reset
+
+**Examples:**
+```bash
+# Perform soft reset (default)
+paise2 reset
+
+# Perform hard reset (complete data clearing)
+paise2 reset --hard
+```
+
+**Behavior:**
+- Executes all registered ResetAction plugins in sequence
+- Continues execution even if individual reset actions fail
+- Provides feedback on success/failure of each reset action
+- Shows warning if no reset actions are registered
+
+**Error Handling:**
+- Individual reset action failures are logged but don't stop the overall reset process
+- System errors during reset initialization will abort the command
+
 ### `paise2 version`
 
 Display version information.

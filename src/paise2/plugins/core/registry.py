@@ -24,6 +24,7 @@ from paise2.plugins.core.interfaces import (
     ContentSource,
     DataStorageProvider,
     LifecycleAction,
+    ResetAction,
     StateStorageProvider,
     TaskQueueProvider,
 )
@@ -73,6 +74,10 @@ class PluginHooks:
         """Register a lifecycle action."""
 
     @hookspec
+    def register_reset_action(self, register: Callable[[ResetAction], None]) -> None:
+        """Register a reset action."""
+
+    @hookspec
     def register_data_storage_provider(
         self, register: Callable[[DataStorageProvider], None]
     ) -> None:
@@ -116,6 +121,7 @@ class PluginManager:
         self._content_sources: list[ContentSource] = []
         self._content_fetchers: list[ContentFetcher] = []
         self._lifecycle_actions: list[LifecycleAction] = []
+        self._reset_actions: list[ResetAction] = []
         self._data_storage_providers: list[DataStorageProvider] = []
         self._task_queue_providers: list[TaskQueueProvider] = []
         self._state_providers: list[StateStorageProvider] = []
@@ -213,6 +219,7 @@ class PluginManager:
         self.pm.hook.register_content_source(register=self._register_content_source)
         self.pm.hook.register_content_fetcher(register=self._register_content_fetcher)
         self.pm.hook.register_lifecycle_action(register=self._register_lifecycle_action)
+        self.pm.hook.register_reset_action(register=self._register_reset_action)
         self.pm.hook.register_data_storage_provider(
             register=self._register_data_storage_provider
         )
@@ -314,6 +321,19 @@ class PluginManager:
                     type(action).__name__,
                 )
 
+    def _register_reset_action(self, action: ResetAction) -> None:
+        """Register a reset action."""
+        if self._validate_and_log(action, ResetAction):
+            # Check for duplicates by comparing provider instances
+            if action not in self._registered_providers:
+                self._reset_actions.append(action)
+                self._registered_providers.add(action)
+            else:
+                logger.debug(
+                    "Reset action already registered, skipping: %s",
+                    type(action).__name__,
+                )
+
     def _register_data_storage_provider(self, provider: DataStorageProvider) -> None:
         """Register a data storage provider."""
         if self._validate_and_log(provider, DataStorageProvider):
@@ -402,6 +422,13 @@ class PluginManager:
             return True
         return False
 
+    def register_reset_action(self, action: ResetAction) -> bool:
+        """Register a reset action directly."""
+        if self._validate_and_log(action, ResetAction):
+            self._reset_actions.append(action)
+            return True
+        return False
+
     def register_data_storage_provider(self, provider: DataStorageProvider) -> bool:
         """Register a data storage provider directly."""
         if self._validate_and_log(provider, DataStorageProvider):
@@ -456,6 +483,10 @@ class PluginManager:
     def get_lifecycle_actions(self) -> list[LifecycleAction]:
         """Get all registered lifecycle actions."""
         return self._lifecycle_actions.copy()
+
+    def get_reset_actions(self) -> list[ResetAction]:
+        """Get all registered reset actions."""
+        return self._reset_actions.copy()
 
     def get_data_storage_providers(self) -> list[DataStorageProvider]:
         """Get all registered data storage providers."""

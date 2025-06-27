@@ -4,25 +4,28 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING
 
 import click
+
+if TYPE_CHECKING:
+    from paise2.plugins.core.registry import PluginManager
 
 __all__ = ["get_plugin_manager", "main"]
 
 logger = logging.getLogger(__name__)
 
 # Global plugin manager instance available to all CLI commands
-_plugin_manager: Any = None
+_plugin_manager: PluginManager | None = None
 
 
-def _set_plugin_manager(manager: Any) -> None:
+def _set_plugin_manager(manager: PluginManager) -> None:
     """Set the global plugin manager instance."""
     global _plugin_manager  # noqa: PLW0603
     _plugin_manager = manager
 
 
-def get_plugin_manager() -> Any:
+def get_plugin_manager() -> PluginManager:
     """Get the global plugin manager instance."""
     if _plugin_manager is None:
         msg = (
