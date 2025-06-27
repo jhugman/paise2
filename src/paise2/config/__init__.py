@@ -4,7 +4,7 @@
 from .factory import ConfigurationFactory
 from .manager import ConfigurationManager
 from .models import Configuration, ConfigurationDict
-from .providers import FileConfigurationProvider
+from .providers import FileConfigurationProvider, ProfileFileConfigurationProvider
 
 __all__ = [
     "Configuration",
@@ -12,4 +12,5 @@ __all__ = [
     "ConfigurationFactory",
     "ConfigurationManager",
     "FileConfigurationProvider",
+    "ProfileFileConfigurationProvider",
 ]

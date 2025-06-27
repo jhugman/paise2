@@ -4,7 +4,7 @@ from typing import Callable
 
 import click
 
-from paise2.config.providers import FileConfigurationProvider
+from paise2.config.providers import ProfileFileConfigurationProvider
 from paise2.plugins.core.interfaces import ConfigurationProvider, TaskQueueProvider
 from paise2.plugins.core.registry import hookimpl
 from paise2.plugins.providers.task_queue import HueySQLiteTaskQueueProvider
@@ -36,14 +36,14 @@ class SqliteWorkerPlugin:
     ) -> None:
         """Register the task queue configuration provider."""
         register(
-            FileConfigurationProvider(
+            ProfileFileConfigurationProvider(
                 self._tq_config_file,
                 plugin_module=self._plugin_module,
                 config_id="task_queue",
             )
         )
         register(
-            FileConfigurationProvider(
+            ProfileFileConfigurationProvider(
                 self._worker_config_file,
                 plugin_module=self._plugin_module,
                 config_id="worker",

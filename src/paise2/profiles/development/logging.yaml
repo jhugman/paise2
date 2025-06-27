@@ -3,8 +3,3 @@ logging:
   level: DEBUG
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   name: paise2-dev
-
-# Development-specific settings
-app:
-  debug: true
-  verbose: true
