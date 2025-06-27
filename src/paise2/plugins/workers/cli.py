@@ -15,6 +15,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from paise2.constants import PAISE2_PROFILE_ENV, get_profile
 from paise2.plugins.core.registry import hookimpl
 
 if TYPE_CHECKING:
@@ -132,7 +133,7 @@ def _execute_start_command(concurrency: int | None, daemonize: bool) -> None:
     from paise2.main import Application
 
     # Check profile compatibility
-    profile = os.getenv("PAISE2_PROFILE", "development")
+    profile = get_profile()
     if profile == "test":
         click.echo(
             "Test profile uses immediate task execution.\n"
@@ -169,7 +170,7 @@ def _execute_start_command(concurrency: int | None, daemonize: bool) -> None:
         click.echo(f"Starting {concurrency} worker(s)...")
 
         # Set profile environment variable for worker processes
-        os.environ["PAISE2_PROFILE"] = profile
+        os.environ[PAISE2_PROFILE_ENV] = profile
 
         # Create and configure consumer
         consumer: Any = huey.create_consumer(workers=concurrency)
@@ -240,7 +241,7 @@ def _get_worker_status(singletons: Singletons) -> dict[str, Any]:
     import logging
 
     logger = logging.getLogger(__name__)
-    profile = os.getenv("PAISE2_PROFILE", "development")
+    profile = get_profile()
 
     status: dict[str, Any] = {
         "profile": profile,

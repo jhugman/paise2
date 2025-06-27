@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import pluggy
 
 import paise2
+from paise2.constants import get_profiles_dir
 
 if TYPE_CHECKING:
     import click
@@ -105,7 +106,7 @@ class PluginManager:
 
     def __init__(self, profiles_dir: Path | None = None) -> None:
         """Initialize the plugin manager."""
-        self._profiles_dir = profiles_dir or Path(paise2.__file__).parent / "profiles"
+        self._profiles_dir = profiles_dir or get_profiles_dir()
         self.pm = pluggy.PluginManager("paise2")
         self.pm.add_hookspecs(PluginHooks)
 

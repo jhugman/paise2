@@ -3,9 +3,10 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from paise2.constants import get_profile
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -104,7 +105,7 @@ class ProfileFileConfigurationProvider(ConfigurationProvider):
     def _resolve_profile_file_path(self) -> Path:
         """Resolve the full path to the configuration file based on current profile."""
         # Get current profile from environment
-        profile = os.getenv("PAISE2_PROFILE", "development").lower()
+        profile = get_profile()
 
         # Handle absolute paths - use as-is
         if Path(self.file_path).is_absolute():
@@ -138,7 +139,7 @@ class ProfileFileConfigurationProvider(ConfigurationProvider):
         config_path = self._resolve_profile_file_path()
 
         if not config_path.exists():
-            profile = os.getenv("PAISE2_PROFILE", "development")
+            profile = get_profile()
             msg = f"Configuration file not found: {config_path}. Profile: {profile}"
             raise FileNotFoundError(msg)
 

@@ -8,6 +8,8 @@ import sqlite3
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from paise2.constants import get_default_state_db_path
+
 if TYPE_CHECKING:
     from paise2.config.models import Configuration
     from paise2.plugins.core.interfaces import StateStorage
@@ -205,7 +207,7 @@ class FileStateStorageProvider:
         """Create a file-based state storage instance."""
         # If a specific path is provided in configuration, use it exactly
         path_from_config = configuration.get(
-            "state_storage.file_path", "~/.local/share/paise2/state.db"
+            "state_storage.file_path", get_default_state_db_path()
         )
         if path_from_config == ":memory:":
             return FileStateStorage(None)

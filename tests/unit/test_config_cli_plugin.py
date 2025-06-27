@@ -12,6 +12,7 @@ import click
 import yaml
 from click.testing import CliRunner
 
+from paise2.constants import PAISE_CONFIG_DIR_ENV
 from paise2.plugins.cli.config_commands import ConfigCliPlugin
 from paise2.plugins.core.interfaces import ConfigurationProvider
 from paise2.plugins.core.registry import PluginManager
@@ -37,8 +38,8 @@ class TestConfigCliPlugin:
     def setup_method(self) -> None:
         """Set up test environment."""
         self.temp_dir = tempfile.mkdtemp()
-        self.original_env = os.environ.get("PAISE_CONFIG_DIR")
-        os.environ["PAISE_CONFIG_DIR"] = self.temp_dir
+        self.original_env = os.environ.get(PAISE_CONFIG_DIR_ENV)
+        os.environ[PAISE_CONFIG_DIR_ENV] = self.temp_dir
 
         # Set up plugin manager with test providers
         self.plugin_manager = PluginManager()
@@ -67,9 +68,9 @@ class TestConfigCliPlugin:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         if self.original_env:
-            os.environ["PAISE_CONFIG_DIR"] = self.original_env
+            os.environ[PAISE_CONFIG_DIR_ENV] = self.original_env
         else:
-            os.environ.pop("PAISE_CONFIG_DIR", None)
+            os.environ.pop(PAISE_CONFIG_DIR_ENV, None)
 
         # Clean up temp directory
         import shutil

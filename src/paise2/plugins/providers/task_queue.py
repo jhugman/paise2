@@ -6,6 +6,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from paise2.constants import get_default_task_db_path
+
 if TYPE_CHECKING:
     from huey import Huey
 
@@ -73,7 +75,7 @@ class HueySQLiteTaskQueueProvider:
         from huey import SqliteHuey
 
         db_path = configuration.get(
-            "task_queue.sqlite_path", "~/.local/share/paise2/tasks.db"
+            "task_queue.sqlite_path", get_default_task_db_path()
         )
         resolved_path = Path(db_path).expanduser()
 

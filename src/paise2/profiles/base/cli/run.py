@@ -23,7 +23,7 @@ def _create_run_command() -> Any:
         Examples:
           PAISE2_PROFILE=development paise2 run
                                                 # Start with development profile
-          PAISE2_CONFIG_DIR=~/.config/paise2/ paise2 run
+          PAISE_CONFIG_DIR=~/.config/paise2/ paise2 run
                                                 # Start with custom configuration
         """
         from paise2.cli import get_plugin_manager

@@ -6,7 +6,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-import paise2
+from paise2.constants import get_profiles_dir
 from paise2.plugins.core.registry import PluginManager
 from paise2.profiles.factory import (
     create_development_plugin_manager,
@@ -99,10 +99,8 @@ def register_state_storage_provider(
 
     def test_profile_directory_structure(self) -> None:
         """Test that profile directories exist and have expected structure."""
-        paise2_root = Path(paise2.__file__).parent
-
         # Check profile directories exist
-        profiles_dir = paise2_root / "profiles"
+        profiles_dir = get_profiles_dir()
         assert profiles_dir.exists()
 
         for profile in ["production", "development", "test"]:

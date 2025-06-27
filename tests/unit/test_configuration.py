@@ -13,6 +13,7 @@ import yaml
 
 from paise2.config.diffing import ConcreteConfiguration
 from paise2.config.models import Configuration
+from paise2.constants import PAISE_CONFIG_DIR_ENV
 
 
 class TestConfiguration(unittest.TestCase):
@@ -183,15 +184,15 @@ class TestConfigurationManager(unittest.TestCase):
     def setUp(self) -> None:
         """Set up test environment."""
         self.temp_dir = tempfile.mkdtemp()
-        self.original_env = os.environ.get("PAISE_CONFIG_DIR")
-        os.environ["PAISE_CONFIG_DIR"] = self.temp_dir
+        self.original_env = os.environ.get(PAISE_CONFIG_DIR_ENV)
+        os.environ[PAISE_CONFIG_DIR_ENV] = self.temp_dir
 
     def tearDown(self) -> None:
         """Clean up test environment."""
         if self.original_env:
-            os.environ["PAISE_CONFIG_DIR"] = self.original_env
+            os.environ[PAISE_CONFIG_DIR_ENV] = self.original_env
         else:
-            del os.environ["PAISE_CONFIG_DIR"]
+            del os.environ[PAISE_CONFIG_DIR_ENV]
 
         # Clean up temp directory
         import shutil

@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from paise2.constants import get_default_cache_path
+
 if TYPE_CHECKING:
     from paise2.config.models import Configuration
     from paise2.models import CacheId, Content
@@ -314,7 +316,7 @@ class FileCacheProvider:
 
     def create_cache(self, configuration: Configuration) -> CacheManager:
         """Create a file-based cache manager instance."""
-        cache_path = configuration.get("cache.file_path", "~/.local/share/paise2/cache")
+        cache_path = configuration.get("cache.file_path", get_default_cache_path())
 
         if cache_path == ":memory:":
             # Special case for testing

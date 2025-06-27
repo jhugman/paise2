@@ -2,8 +2,7 @@
 # ABOUTME: Provides convenient functions to create plugin managers for
 # different profiles
 
-import os
-
+from paise2.constants import get_profile
 from paise2.plugins.core.registry import PluginManager
 
 
@@ -97,5 +96,5 @@ def create_plugin_manager_from_env() -> PluginManager:
     Raises:
         ValueError: If an unknown profile is specified
     """
-    profile = os.getenv("PAISE2_PROFILE", "development").lower()
+    profile = get_profile()
     return create_plugin_manager(profile)

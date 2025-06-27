@@ -3,11 +3,12 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import yaml
+
+from paise2.constants import get_config_dir as get_default_config_dir
 
 if TYPE_CHECKING:
     from paise2.plugins.core.interfaces import Configuration, StateStorage
@@ -104,7 +105,7 @@ class ConfigurationManager:
         Returns:
             Configuration directory path with user home expansion
         """
-        config_dir = os.environ.get("PAISE_CONFIG_DIR", "~/.config/paise2")
+        config_dir = get_default_config_dir()
         return str(Path(config_dir).expanduser())
 
     def get_config_file(self, config_id: str) -> str:
